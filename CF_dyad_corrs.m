@@ -1,5 +1,6 @@
 %% Instructions %%
-% Dependencies: fdr_bky.m 
+% Dependencies for analyses: fdr_bky.m 
+% Dependencies for aimaging: spm12, xjview, and mni_coordinates (in folder)
 %
 % Data must be preprocessed before using this script
 %
@@ -9,7 +10,8 @@
 % different trim time.
 %
 % If you prefer to specify your data path instead of selecting each time
-% uncomment line ___ and comment out line ___
+% comment out the uigetdir command and uncomment the command above it. Make
+% sure to specify the location of the preprocessed NIRS data
 %% Analyses to run
 % Set to zero if you do not want to perform the task
 compile=0;      % If the data has yet to be compiled after preprocessing 
@@ -17,7 +19,7 @@ oxyOnly=0;      % 0=z_totaloxy; 1=z_oxy (rarely do we look only at deoxy)
 chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
 areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
 FDR=0;          % False discovery rate correction
-writeXL=0;      % If you want to write the data to an excel sheet(s)
+writeXL=0;      % Writse the data to an excel sheet(s) in the preprocess_dir
 image=0;        % To image a conversation & dyad (will prompt you for which ones)
 
 %% Load directory & varibles to use
@@ -27,7 +29,7 @@ preprocess_dir=uigetdir('','Choose Data Directory');
 
 %% Properties
 % These can be changed based on the study and what FDR cutoff is prefered
-cutoff=0.1; %P-value to use as false discovery rate cut-off
+cutoff=0.01; %P-value to use as false discovery rate cut-off
 length_scan=2442; %At what frame do you want to trim all subjects (shortest convo)
 numdyads=54;
 numchans=42;
@@ -238,15 +240,14 @@ if areaCorr
     save(strcat(preprocess_dir,filesep,'CF_areas'),'Sig_r_conflict')
     
     if writeXL
-        dyads=readtable(strcat(pwd,filesep,'Dyads.csv'));
-        dyads=table2array(dyads);
+        load('CF_dyads.mat')
         areas=["Dyads","mPFC","lPFC","tpj"];
         Sig_r_con1=array2table([dyads,Sig_r_conflict(:,:,1)],'VariableNames',areas);
         Sig_r_con2=array2table([dyads,Sig_r_conflict(:,:,2)],'VariableNames',areas);
         r_values_con=array2table([dyads,Sig_r_conflict(:,:,3)],'VariableNames',areas);
 
         %File name based on FDR used
-        xlName=strcat('Sig_mask_',num2str(cutoff),'.xls'); 
+        xlName=strcat(preprocess_dir,filesep,'Sig_mask_',num2str(cutoff),'.xls'); 
         writetable(r_values_con,xlName,'sheet','r_vals')  %r-vals no mask or FDR
         writetable(Sig_r_con1,xlName,'sheet','r_vals_lostchs')  %r-vals lost chans masked
         writetable(Sig_r_con2,xlName,'sheet','r_vals_mask') %r-vals FDR & mask
@@ -257,7 +258,7 @@ end
 
 %% Imaging correlated areas
 if image
-    load(strcat(preprocess_dir,filesep,'CF_mnicoords.mat'));
+    load(strcat(pwd,filesep,'CF_NIRS',filesep,'CF_mnicoords.mat');
     load(strcat(preprocess_dir,filesep,'CF_FDR_chCorrs.mat'));
 
     %Choose the dyad and conversation you wish to image
