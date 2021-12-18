@@ -356,7 +356,7 @@ if areaCorr
 
         save(strcat(preprocess_dir,filesep,'SS_areas'),'Sig_r_d1','Sig_r_d2')
 
-        load('SS_dyads.mat')
+        load(strcat('SS_NIRS',filesep,'SS_dyads.mat'))
         areas=["Dyads","mPFC","lPFC","pmc","sms","tpj"];
         Sig_r_D1=array2table([dyads,Sig_r_d1(:,:,1)],'VariableNames',areas);
         r_d1_lost=array2table([dyads,Sig_r_d1(:,:,2)],'VariableNames',areas);
