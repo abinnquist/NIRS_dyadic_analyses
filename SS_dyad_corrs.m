@@ -1,6 +1,7 @@
 %% Instructions %%
-% Dependencies: fdr_bky.m 
-%
+% Dependencies for analyses: fdr_bky.m 
+% Dependencies for aimaging: spm12, xjview, and mni_coordinates (in folder)
+% 
 % Data must be preprocessed before using this script
 %
 % Before running the script make sure to choose the analyses you want to run 
@@ -9,14 +10,15 @@
 % different trim time.
 %
 % If you prefer to specify your data path instead of selecting each time
-% uncomment line 25 and comment out line 26
+% comment out the uigetdir command and uncomment the command above it. Make
+% sure to specify the location of the preprocessed NIRS data
 %% Analyses to run
 % Set to zero if you do not want to perform the task
 compile=0;      % If the data has yet to be compiled into all dyad matices
 oxyOnly=0;      % 0=z_totaloxy; 1=z_oxy
 chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
-areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
-FDR=1;          % False discovery rate correction
+areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
+FDR=0;          % False discovery rate correction
 image=0;        % To image a conversation & dyad (will prompt you for which ones)
 writeXL=0;      % If you want to write the data to an excel sheet(s)
 
@@ -354,8 +356,7 @@ if areaCorr
 
         save(strcat(preprocess_dir,filesep,'SS_areas'),'Sig_r_d1','Sig_r_d2')
 
-        dyads=readtable(strcat(pwd,filesep,'SS_dyads.csv'));
-        dyads=table2array(dyads);
+        load('SS_dyads.mat')
         areas=["Dyads","mPFC","lPFC","pmc","sms","tpj"];
         Sig_r_D1=array2table([dyads,Sig_r_d1(:,:,1)],'VariableNames',areas);
         r_d1_lost=array2table([dyads,Sig_r_d1(:,:,2)],'VariableNames',areas);
@@ -368,18 +369,21 @@ if areaCorr
 
     if writeXL
         if FDR
-            writetable(r_values_d1,'D1_Sig_mask_0.1.xls','sheet','r_vals')
-            writetable(r_d1_lost,'D1_Sig_mask_0.1.xls','sheet','r_vals_lostchs')
-            writetable(Sig_r_D1,'D1_Sig_mask_0.1.xls','sheet','r_vals_mask')
+            xlName=strcat(preprocess_dir,filesep,'D1_Sig_mask_',num2str(cutoff),'.xls');
+            writetable(r_values_d1,xlName,'sheet','r_vals')
+            writetable(r_d1_lost,xlName,'sheet','r_vals_lostchs')
+            writetable(Sig_r_D1,xlName,'sheet','r_vals_mask')
 
-            writetable(r_values_d2,'D2_Sig_mask_0.1.xls','sheet','r_vals')
-            writetable(r_d2_lost,'D2_Sig_mask_0.1.xls','sheet','r_vals_lostchs')
-            writetable(Sig_r_D2,'D2_Sig_mask_0.1.xls','sheet','r_vals_mask')
+            xlName=strcat(preprocess_dir,filesep,'D2_Sig_mask_',num2str(cutoff),'.xls');
+            writetable(r_values_d2,xlName,'sheet','r_vals')
+            writetable(r_d2_lost,xlName,'sheet','r_vals_lostchs')
+            writetable(Sig_r_D2,xlName,'sheet','r_vals_mask')
         else
-            writetable(r_d1_areas,'SS_areas.xls','sheet','r_d1_areas')
-            writetable(p_d1_areas,'SS_areas.xls','sheet','p_d1_areas')
-            writetable(r_d2_areas,'SS_areas.xls','sheet','r_d2_areas')
-            writetable(p_d2_areas,'SS_areas.xls','sheet','p_d2_areas')
+            xlName=strcat(preprocess_dir,filesep,'SS_areas.xls');
+            writetable(r_d1_areas,xlName,'sheet','r_d1_areas')
+            writetable(p_d1_areas,xlName,'sheet','p_d1_areas')
+            writetable(r_d2_areas,xlName,'sheet','r_d2_areas')
+            writetable(p_d2_areas,xlName,'sheet','p_d2_areas')
         end
     end
 end
@@ -387,7 +391,7 @@ end
 
 %% Imaging correlated areas
 if image
-    load(strcat(preprocess_dir,filesep,'SS_mnicoords.mat'));
+    load(strcat(pwd,filesep,'SS_NIRS',filesep,'SS_mnicoords.mat'));
     load(strcat(preprocess_dir,filesep,'SS_FDR_chCorrs.mat'));
 
     %Choose the dyad and conversation you wish to image
