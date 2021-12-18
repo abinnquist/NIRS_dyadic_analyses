@@ -240,7 +240,7 @@ if areaCorr
     save(strcat(preprocess_dir,filesep,'CF_areas'),'Sig_r_conflict')
     
     if writeXL
-        load('CF_dyads.mat')
+        load(strcat('CF_NIRS',filesep,'CF_dyads.mat'))
         areas=["Dyads","mPFC","lPFC","tpj"];
         Sig_r_con1=array2table([dyads,Sig_r_conflict(:,:,1)],'VariableNames',areas);
         Sig_r_con2=array2table([dyads,Sig_r_conflict(:,:,2)],'VariableNames',areas);
