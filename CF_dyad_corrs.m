@@ -24,11 +24,12 @@ image=0;        % To image a conversation & dyad (will prompt you for which ones
 
 %% Load directory & varibles to use
 % You can set the directory w/ line 3 or use the get directory in line 4
-%preprocess_dir= ''; %Specify path instead of selecting each run
-preprocess_dir=uigetdir('','Choose Data Directory');
+preprocess_dir= 'C:/Users/Mike/Desktop/Conflict data/preprocessedFiles_vccbsi'; %Specify path instead of selecting each run
+%preprocess_dir=uigetdir('','Choose Data Directory');
 
 %% Properties
 % These can be changed based on the study and what FDR cutoff is prefered
+dataprefix='0';
 cutoff=0.01; %P-value to use as false discovery rate cut-off
 length_scan=2442; %At what frame do you want to trim all subjects (shortest convo)
 numdyads=54;
@@ -40,60 +41,25 @@ numareas=3;
 % matrices (time,channels,dyad) based on type of oxy (deoxy,oxy,totaloxy),  
 % discussion (affiliation and conflict), and subject (a and b), (3x2x2=12).
 if compile
-    dataprefix='0';
-    %find all of the preprocessed folders
-    currdir=dir(strcat(preprocess_dir,filesep,dataprefix,'*'));
+[z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,z_totaloxy1_2,z_deoxy2_1,...
+    z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,z_oxy2_2,z_totaloxy2_2]= compileNIRSdata(preprocess_dir,dataprefix);
 
-% write a loop to compile the data
-for i=1:length(currdir)
-    dyad=currdir(i).name; %define dyad
-    
-    subfolder=dir(strcat(currdir(1).folder,filesep,dyad,filesep,dyad,'*',filesep,dyad,'a_affili*')); 
-    if ~isempty(subfolder)
-        subfile_path=strcat(subfolder.folder,filesep,subfolder.name);
-        subfiles=dir(fullfile(subfile_path,'*.mat'));
-        load(strcat(subfile_path,filesep,subfiles(2).name))
-        length_convo=length(z_oxy);
-        z_deoxy1_affil_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-        z_oxy1_affil_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-        z_totaloxy1_affil_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-    end
-    subfolder=dir(strcat(currdir(1).folder,filesep,dyad,filesep,dyad,'*',filesep,dyad,'b_affili*'));
-    if ~isempty(subfolder)
-        subfile_path=strcat(subfolder.folder,filesep,subfolder.name);
-        subfiles=dir(fullfile(subfile_path,'*.mat'));
-        load(strcat(subfile_path,filesep,subfiles(2).name))
-        length_convo=length(z_oxy);
-        z_deoxy2_affil_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-        z_oxy2_affil_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-        z_totaloxy2_affil_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-    end
-    
-    subfolder=dir(strcat(currdir(1).folder,filesep,dyad,filesep,dyad,'*',filesep,dyad,'a_con*')); % find names of subfolder
-    if ~isempty(subfolder)
-        subfile_path=strcat(subfolder.folder,filesep,subfolder.name);
-        subfiles=dir(fullfile(subfile_path,'*.mat'));
-        load(strcat(subfile_path,filesep,subfiles(2).name))
-        length_convo=length(z_oxy);
-        z_deoxy1_con_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-        z_oxy1_con_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-        z_totaloxy1_con_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-    end
-    subfolder=dir(strcat(currdir(1).folder,filesep,dyad,filesep,dyad,'*',filesep,dyad,'b_con*'));
-    if ~isempty(subfolder)
-        subfile_path=strcat(subfolder.folder,filesep,subfolder.name);
-        subfiles=dir(fullfile(subfile_path,'*.mat'));
-        load(strcat(subfile_path,filesep,subfiles(2).name))
-        length_convo=length(z_oxy);
-        z_deoxy2_con_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-        z_oxy2_con_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-        z_totaloxy2_con_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-    end
-end
+z_deoxy1_affil=z_deoxy1_1;
+z_deoxy2_affil=z_deoxy1_2;
+z_deoxy1_con=z_deoxy2_1;
+z_deoxy2_con=z_deoxy2_2;
+z_oxy1_affil=z_oxy1_1;
+z_oxy2_affil=z_oxy1_2;
+z_oxy1_con=z_oxy2_1;
+z_oxy2_con=z_oxy2_2;
+z_totaloxy1_affil=z_totaloxy1_1;
+z_totaloxy2_affil=z_totaloxy1_2;
+z_totaloxy1_con=z_totaloxy2_1;
+z_totaloxy2_con=z_totaloxy2_2;
 
-    save(strcat(preprocess_dir,filesep,'Conflict_compiled'),'z_deoxy1_affil_all','z_deoxy2_affil_all',...
-'z_oxy1_affil_all','z_oxy2_affil_all','z_totaloxy1_affil_all','z_totaloxy2_affil_all','z_deoxy1_con_all','z_deoxy2_con_all',...
-'z_oxy1_con_all','z_oxy2_con_all','z_totaloxy1_con_all','z_totaloxy2_con_all');
+save(strcat(preprocess_dir,filesep,'Conflict_compiled'),'z_deoxy1_affil','z_deoxy2_affil',...
+'z_oxy1_affil','z_oxy2_affil','z_totaloxy1_affil','z_totaloxy2_affil','z_deoxy1_con','z_deoxy2_con',...
+'z_oxy1_con','z_oxy2_con','z_totaloxy1_con','z_totaloxy2_con');
 
     clearvars -except preprocess_dir numdyads numchans length_scan oxyOnly chCorr areaCorr cutoff FDR writeXL image
 end
@@ -105,12 +71,12 @@ if chCorr
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_totaloxy1_affil_all(1:length_scan,channel,dyad);
-                b = z_totaloxy2_affil_all(1:length_scan,channel,dyad);
+                a = z_totaloxy1_affil(1:length_scan,channel,dyad);
+                b = z_totaloxy2_affil(1:length_scan,channel,dyad);
                 [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
 
-                c = z_totaloxy1_con_all(1:length_scan,channel,dyad);
-                d = z_totaloxy2_con_all(1:length_scan,channel,dyad);
+                c = z_totaloxy1_con(1:length_scan,channel,dyad);
+                d = z_totaloxy2_con(1:length_scan,channel,dyad);
                 [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
             end
         end
@@ -119,12 +85,12 @@ if chCorr
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_oxy1_affil_all(1:length_scan,channel,dyad);
-                b = z_oxy2_affil_all(1:length_scan,channel,dyad);
+                a = z_oxy1_affil(1:length_scan,channel,dyad);
+                b = z_oxy2_affil(1:length_scan,channel,dyad);
                 [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
 
-                c = z_totaloxy1_con_all(1:length_scan,channel,dyad);
-                d = z_totaloxy2_con_all(1:length_scan,channel,dyad);
+                c = z_totaloxy1_con(1:length_scan,channel,dyad);
+                d = z_totaloxy2_con(1:length_scan,channel,dyad);
                 [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
             end
         end
@@ -156,18 +122,18 @@ if areaCorr
         load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_oxy1_con_all','z_oxy2_con_all')
         
             %Get the mean for each area of interest
-        z_con1_areas(:,1,:) = nanmean(z_oxy1_con_all(1:length_scan,7:14,:),2); %mpfc    
-        z_con1_areas(:,2,:) = nanmean(z_oxy1_con_all(1:length_scan,[1:6,15:20],:),2); %lpfc
-        z_con1_areas(:,3,:) = nanmean(z_oxy1_con_all(1:length_scan,[25:30,36:41],:),2); %tpj
-        z_con2_areas(:,1,:) = nanmean(z_oxy2_con_all(1:length_scan,7:14,:),2); 
-        z_con2_areas(:,2,:) = nanmean(z_oxy2_con_all(1:length_scan,[1:6,15:20],:),2);
-        z_con2_areas(:,3,:) = nanmean(z_oxy2_con_all(1:length_scan,[25:30,36:41],:),2);
+        z_con1_areas(:,1,:) = nanmean(z_oxy1_con(1:length_scan,7:14,:),2); %mpfc    
+        z_con1_areas(:,2,:) = nanmean(z_oxy1_con(1:length_scan,[1:6,15:20],:),2); %lpfc
+        z_con1_areas(:,3,:) = nanmean(z_oxy1_con(1:length_scan,[25:30,36:41],:),2); %tpj
+        z_con2_areas(:,1,:) = nanmean(z_oxy2_con(1:length_scan,7:14,:),2); 
+        z_con2_areas(:,2,:) = nanmean(z_oxy2_con(1:length_scan,[1:6,15:20],:),2);
+        z_con2_areas(:,3,:) = nanmean(z_oxy2_con(1:length_scan,[25:30,36:41],:),2);
         %Number of missing channels per subject
         for sub=1:2
             if sub==1
-                scan=z_oxy1_con_all;
+                scan=z_oxy1_con;
             else
-                scan=z_oxy2_con_all;
+                scan=z_oxy2_con;
             end
             n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,7:14,:))))/length_scan;
             n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,[1:6,15:20],:))))/length_scan;
@@ -178,18 +144,18 @@ if areaCorr
         load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con_all','z_totaloxy2_con_all')
         
         %Get the mean for each area of interest
-        z_con1_areas(:,1,:) = nanmean(z_totaloxy1_con_all(1:length_scan,7:14,:),2);
-        z_con1_areas(:,2,:) = nanmean(z_totaloxy1_con_all(1:length_scan,[1:6,15:20],:),2);
-        z_con1_areas(:,3,:) = nanmean(z_totaloxy1_con_all(1:length_scan,[25:30,36:41],:),2);
-        z_con2_areas(:,1,:) = nanmean(z_totaloxy2_con_all(1:length_scan,7:14,:),2); 
-        z_con2_areas(:,2,:) = nanmean(z_totaloxy2_con_all(1:length_scan,[1:6,15:20],:),2);
-        z_con2_areas(:,3,:) = nanmean(z_totaloxy2_con_all(1:length_scan,[25:30,36:41],:),2);
+        z_con1_areas(:,1,:) = nanmean(z_totaloxy1_con(1:length_scan,7:14,:),2);
+        z_con1_areas(:,2,:) = nanmean(z_totaloxy1_con(1:length_scan,[1:6,15:20],:),2);
+        z_con1_areas(:,3,:) = nanmean(z_totaloxy1_con(1:length_scan,[25:30,36:41],:),2);
+        z_con2_areas(:,1,:) = nanmean(z_totaloxy2_con(1:length_scan,7:14,:),2); 
+        z_con2_areas(:,2,:) = nanmean(z_totaloxy2_con(1:length_scan,[1:6,15:20],:),2);
+        z_con2_areas(:,3,:) = nanmean(z_totaloxy2_con(1:length_scan,[25:30,36:41],:),2);
         %Number of missing channels per subject
         for sub=1:2
             if sub==1
-                scan=z_totaloxy1_con_all;
+                scan=z_totaloxy1_con;
             else
-                scan=z_totaloxy2_con_all;
+                scan=z_totaloxy2_con;
             end
             n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,7:14,:))))/length_scan;
             n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,[1:6,15:20],:))))/length_scan;
