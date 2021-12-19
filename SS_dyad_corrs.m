@@ -29,6 +29,7 @@ preprocess_dir=uigetdir('','Choose Data Directory');
 
 %% Properties
 % These can be changed based on the study and what FDR cutoff is prefered
+dataprefix='SS';
 cutoff=0.1; %P-value to use as false discovery rate cut-off
 length_diss1=1853; %Can be changed to the shortest conversation
 length_diss2=1810; %Can be changed to the shortest conversation
@@ -41,54 +42,26 @@ numareas=5;
 % matrix for type of oxy (deoxy,oxy,totaloxy), discussion (1 and 2),  
 % and subject (1 and 2) for twelve (3x2x2=12) 3D matrices (time,channels,dyad)
 if compile
-    dataprefix='SS';
-    currdir=dir(strcat(preprocess_dir,filesep,dataprefix,'*'));
+[z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,z_totaloxy1_2,z_deoxy2_1,...
+    z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,z_oxy2_2,z_totaloxy2_2] = compileNIRSdata(preprocess_dir,dataprefix);
 
-    %loop compiles data
-    for i=1:length(currdir)
-        dyad=currdir(i).name; %define dyad
-
-        subfolder=dir(strcat(currdir(1).folder,filesep,dyad,filesep,'SS_discuss1',filesep,'SS_subject*')); 
-        if ~isempty(subfolder) %subject 1 discussion 1
-            subfiles=dir(strcat(subfolder(1).folder,filesep,subfolder(1).name,filesep,'*.mat'));
-            load(strcat(subfiles(1).folder,filesep,subfiles(2).name))
-            length_convo=length(z_oxy);
-            z_deoxy1_diss1_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-            z_oxy1_diss1_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-            z_totaloxy1_diss1_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-        end
-
-        if ~isempty(subfolder) %subject 2 discussion 1
-            subfiles=dir(strcat(subfolder(1).folder,filesep,subfolder(2).name,filesep,'*.mat'));
-            load(strcat(subfiles(1).folder,filesep,subfiles(2).name))
-            z_deoxy2_diss1_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-            z_oxy2_diss1_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-            z_totaloxy2_diss1_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-        end
-
-        subfolder=dir(strcat(currdir(1).folder,filesep,dyad,filesep,'SS_discuss2',filesep,'SS_subject*'));  
-        if ~isempty(subfolder) %subject 1 discussion 2
-            subfiles=dir(strcat(subfolder(1).folder,filesep,subfolder(1).name,filesep,'*.mat'));
-            load(strcat(subfiles(1).folder,filesep,subfiles(2).name))
-            length_convo=length(z_oxy);
-            z_deoxy1_diss2_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-            z_oxy1_diss2_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-            z_totaloxy1_diss2_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-        end
-
-        if ~isempty(subfolder) %subject 2 discussion 2
-            subfiles=dir(strcat(subfolder(1).folder,filesep,subfolder(2).name,filesep,'*.mat'));
-            load(strcat(subfiles(1).folder,filesep,subfiles(2).name))
-            z_deoxy2_diss2_all(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
-            z_oxy2_diss2_all(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-            z_totaloxy2_diss2_all(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
-        end
-    end
+z_deoxy1_diss1=z_deoxy1_1;
+z_deoxy2_diss1=z_deoxy1_2;
+z_deoxy1_diss2=z_deoxy2_1;
+z_deoxy2_diss2=z_deoxy2_2;
+z_oxy1_diss1=z_oxy1_1;
+z_oxy2_diss1=z_oxy1_2;
+z_oxy1_diss2=z_oxy2_1;
+z_oxy2_diss2=z_oxy2_2;
+z_totaloxy1_diss1=z_totaloxy1_1;
+z_totaloxy2_diss1=z_totaloxy1_2;
+z_totaloxy1_diss2=z_totaloxy2_1;
+z_totaloxy2_diss2=z_totaloxy2_2;
     %Save a .mat file to the preprocessing directory 
-    save(strcat(preprocess_dir,filesep,'SS_compiled'),'z_deoxy1_diss1_all','z_deoxy2_diss1_all',...
-    'z_oxy1_diss1_all','z_oxy2_diss1_all','z_totaloxy1_diss1_all','z_totaloxy2_diss1_all',...
-    'z_deoxy1_diss2_all','z_deoxy2_diss2_all','z_oxy1_diss2_all','z_oxy2_diss2_all',...
-    'z_totaloxy1_diss2_all','z_totaloxy2_diss2_all');
+    save(strcat(preprocess_dir,filesep,'SS_compiled'),'z_deoxy1_diss1','z_deoxy2_diss1',...
+    'z_oxy1_diss1','z_oxy2_diss1','z_totaloxy1_diss1','z_totaloxy2_diss1',...
+    'z_deoxy1_diss2','z_deoxy2_diss2','z_oxy1_diss2','z_oxy2_diss2',...
+    'z_totaloxy1_diss2','z_totaloxy2_diss2');
 
     clearvars -except preprocess_dir numdyads numchans length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR image writeXL
 end
@@ -97,17 +70,17 @@ end
 % Computes the matched channel correlations for each dyad and conversation. 
 if chCorr
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'z_oxy1_diss1_all',...
-            'z_oxy2_diss1_all','z_oxy1_diss2_all','z_oxy2_diss2_all');
+        load(strcat(preprocess_dir,filesep,'SS_compiled'),'z_oxy1_diss1',...
+            'z_oxy2_diss1','z_oxy1_diss2','z_oxy2_diss2');
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_oxy1_diss1_all(1:length_diss1,channel,dyad);
-                b = z_oxy2_diss1_all(1:length_diss1,channel,dyad);
+                a = z_oxy1_diss1(1:length_diss1,channel,dyad);
+                b = z_oxy2_diss1(1:length_diss1,channel,dyad);
                 [r_values_diss1(dyad,channel),p_values_diss1(dyad,channel)] = corr(a,b);
 
-                c = z_oxy1_diss2_all(1:length_diss2,channel,dyad);
-                d = z_oxy2_diss2_all(1:length_diss2,channel,dyad);
+                c = z_oxy1_diss2(1:length_diss2,channel,dyad);
+                d = z_oxy2_diss2(1:length_diss2,channel,dyad);
                 [r_values_diss2(dyad,channel),p_values_diss2(dyad,channel)] = corr(c,d);
             end
         end
@@ -117,12 +90,12 @@ if chCorr
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_totaloxy1_diss1_all(:,channel,dyad);
-                b = z_totaloxy2_diss1_all(:,channel,dyad);
+                a = z_totaloxy1_diss1(:,channel,dyad);
+                b = z_totaloxy2_diss1(:,channel,dyad);
                 [r_values_diss1(dyad,channel),p_values_diss1(dyad,channel)] = corr(a,b);
 
-                c = z_totaloxy1_diss2_all(:,channel,dyad);
-                d = z_totaloxy2_diss2_all(:,channel,dyad);
+                c = z_totaloxy1_diss2(:,channel,dyad);
+                d = z_totaloxy2_diss2(:,channel,dyad);
                 [r_values_diss2(dyad,channel),p_values_diss2(dyad,channel)] = corr(c,d);
             end
         end
@@ -182,17 +155,17 @@ if areaCorr
         z2_diss1_areas(:,:,1) = nanmean(z_oxy2_diss1_all(1:length_diss1,[14:16,26:29,33:35],:),2);
         z2_diss1_areas(:,:,1) = nanmean(z_oxy2_diss1_all(1:length_diss1,[17:21,23,36:40,42],:),2);
         
-        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2_all(1:length_diss2,[1:3,5,8,10:12],:),2);
-        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2_all(1:length_diss2,[4,6,7,9,30:31],:),2);
-        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2_all(1:length_diss2,[13,24:25,32],:),2);
-        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2_all(1:length_diss2,[14:16,26:29,33:35],:),2);
-        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2_all(1:length_diss2,[17:21,23,36:40,42],:),2);
+        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2(1:length_diss2,[1:3,5,8,10:12],:),2);
+        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2(1:length_diss2,[4,6,7,9,30:31],:),2);
+        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2(1:length_diss2,[13,24:25,32],:),2);
+        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2(1:length_diss2,[14:16,26:29,33:35],:),2);
+        z1_diss2_areas(:,:,1) = nanmean(z_oxy1_diss2(1:length_diss2,[17:21,23,36:40,42],:),2);
         
-        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2_all(1:length_diss2,[1:3,5,8,10:12],:),2); 
-        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2_all(1:length_diss2,[4,6,7,9,30:31],:),2);
-        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2_all(1:length_diss2,[13,24:25,32],:),2);
-        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2_all(1:length_diss2,[14:16,26:29,33:35],:),2);
-        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2_all(1:length_diss2,[17:21,23,36:40,42],:),2);
+        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2(1:length_diss2,[1:3,5,8,10:12],:),2); 
+        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2(1:length_diss2,[4,6,7,9,30:31],:),2);
+        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2(1:length_diss2,[13,24:25,32],:),2);
+        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2(1:length_diss2,[14:16,26:29,33:35],:),2);
+        z2_diss2_areas(:,:,1) = nanmean(z_oxy2_diss2(1:length_diss2,[17:21,23,36:40,42],:),2);
         
         %Number of missing channels per subject, per area of interest
         for dc=1:2
@@ -212,9 +185,9 @@ if areaCorr
             else
                 for sub=1:2
                     if sub==1
-                        scan=z_oxy1_diss2_all;
+                        scan=z_oxy1_diss2;
                     else
-                        scan=z_oxy2_diss2_all;
+                        scan=z_oxy2_diss2;
                     end
                     n_diss2_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss1,[1:3,5,8,10:12],:))))/length_diss2;
                     n_diss2_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss1,[4,6,7,9,30:31],:))))/length_diss2;
@@ -231,38 +204,38 @@ if areaCorr
          
         %Get the mean for each area of interest. 
         %Number of channels:mpfc[8 chs],lpfc[6 chs],pmc[4 chs],sms[10chs],tpj[12 chs]
-        z1_diss1_areas(:,:,1) = nanmean(z_totaloxy1_diss1_all(1:length_diss1,[1:3,5,8,10:12],:),2); %mpfc
-        z1_diss1_areas(:,:,2) = nanmean(z_totaloxy1_diss1_all(1:length_diss1,[4,6,7,9,30:31],:),2); %lpfc
-        z1_diss1_areas(:,:,3) = nanmean(z_totaloxy1_diss1_all(1:length_diss1,[13,24:25,32],:),2);  %pmc
-        z1_diss1_areas(:,:,4) = nanmean(z_totaloxy1_diss1_all(1:length_diss1,[14:16,26:29,33:35],:),2); %sms        
-        z1_diss1_areas(:,:,5) = nanmean(z_totaloxy1_diss1_all(1:length_diss1,[17:21,36:40],:),2); %tpj
+        z1_diss1_areas(:,:,1) = nanmean(z_totaloxy1_diss1(1:length_diss1,[1:3,5,8,10:12],:),2); %mpfc
+        z1_diss1_areas(:,:,2) = nanmean(z_totaloxy1_diss1(1:length_diss1,[4,6,7,9,30:31],:),2); %lpfc
+        z1_diss1_areas(:,:,3) = nanmean(z_totaloxy1_diss1(1:length_diss1,[13,24:25,32],:),2);  %pmc
+        z1_diss1_areas(:,:,4) = nanmean(z_totaloxy1_diss1(1:length_diss1,[14:16,26:29,33:35],:),2); %sms        
+        z1_diss1_areas(:,:,5) = nanmean(z_totaloxy1_diss1(1:length_diss1,[17:21,36:40],:),2); %tpj
         
-        z2_diss1_areas(:,:,1) = nanmean(z_totaloxy2_diss1_all(1:length_diss1,[1:3,5,8,10:12],:),2); 
-        z2_diss1_areas(:,:,2) = nanmean(z_totaloxy2_diss1_all(1:length_diss1,[4,6,7,9,30:31],:),2);
-        z2_diss1_areas(:,:,3) = nanmean(z_totaloxy2_diss1_all(1:length_diss1,[13,24:25,32],:),2);
-        z2_diss1_areas(:,:,4) = nanmean(z_totaloxy2_diss1_all(1:length_diss1,[14:16,26:29,33:35],:),2);        
-        z2_diss1_areas(:,:,5) = nanmean(z_totaloxy2_diss1_all(1:length_diss1,[17:21,36:40],:),2);
+        z2_diss1_areas(:,:,1) = nanmean(z_totaloxy2_diss1(1:length_diss1,[1:3,5,8,10:12],:),2); 
+        z2_diss1_areas(:,:,2) = nanmean(z_totaloxy2_diss1(1:length_diss1,[4,6,7,9,30:31],:),2);
+        z2_diss1_areas(:,:,3) = nanmean(z_totaloxy2_diss1(1:length_diss1,[13,24:25,32],:),2);
+        z2_diss1_areas(:,:,4) = nanmean(z_totaloxy2_diss1(1:length_diss1,[14:16,26:29,33:35],:),2);        
+        z2_diss1_areas(:,:,5) = nanmean(z_totaloxy2_diss1(1:length_diss1,[17:21,36:40],:),2);
         
-        z1_diss2_areas(:,:,1) = nanmean(z_totaloxy1_diss2_all(1:length_diss2,[1:3,5,8,10:12],:),2);
-        z1_diss2_areas(:,:,2) = nanmean(z_totaloxy1_diss2_all(1:length_diss2,[4,6,7,9,30:31],:),2);
-        z1_diss2_areas(:,:,3) = nanmean(z_totaloxy1_diss2_all(1:length_diss2,[13,24:25,32],:),2);
-        z1_diss2_areas(:,:,4) = nanmean(z_totaloxy1_diss2_all(1:length_diss2,[14:16,26:29,33:35],:),2);        
-        z1_diss2_areas(:,:,5) = nanmean(z_totaloxy1_diss2_all(1:length_diss2,[17:21,36:40],:),2);
+        z1_diss2_areas(:,:,1) = nanmean(z_totaloxy1_diss2(1:length_diss2,[1:3,5,8,10:12],:),2);
+        z1_diss2_areas(:,:,2) = nanmean(z_totaloxy1_diss2(1:length_diss2,[4,6,7,9,30:31],:),2);
+        z1_diss2_areas(:,:,3) = nanmean(z_totaloxy1_diss2(1:length_diss2,[13,24:25,32],:),2);
+        z1_diss2_areas(:,:,4) = nanmean(z_totaloxy1_diss2(1:length_diss2,[14:16,26:29,33:35],:),2);        
+        z1_diss2_areas(:,:,5) = nanmean(z_totaloxy1_diss2(1:length_diss2,[17:21,36:40],:),2);
         
-        z2_diss2_areas(:,:,1) = nanmean(z_totaloxy2_diss2_all(1:length_diss2,[1:3,5,8,10:12],:),2); 
-        z2_diss2_areas(:,:,2) = nanmean(z_totaloxy2_diss2_all(1:length_diss2,[4,6,7,9,30:31],:),2);
-        z2_diss2_areas(:,:,3) = nanmean(z_totaloxy2_diss2_all(1:length_diss2,[13,24:25,32],:),2);
-        z2_diss2_areas(:,:,4) = nanmean(z_totaloxy2_diss2_all(1:length_diss2,[14:16,26:29,33:35],:),2);        
-        z2_diss2_areas(:,:,5) = nanmean(z_totaloxy2_diss2_all(1:length_diss2,[17:21,36:40],:),2);
+        z2_diss2_areas(:,:,1) = nanmean(z_totaloxy2_diss2(1:length_diss2,[1:3,5,8,10:12],:),2); 
+        z2_diss2_areas(:,:,2) = nanmean(z_totaloxy2_diss2(1:length_diss2,[4,6,7,9,30:31],:),2);
+        z2_diss2_areas(:,:,3) = nanmean(z_totaloxy2_diss2(1:length_diss2,[13,24:25,32],:),2);
+        z2_diss2_areas(:,:,4) = nanmean(z_totaloxy2_diss2(1:length_diss2,[14:16,26:29,33:35],:),2);        
+        z2_diss2_areas(:,:,5) = nanmean(z_totaloxy2_diss2(1:length_diss2,[17:21,36:40],:),2);
         
         %Number of missing channels per subject, per area of interest
         for dc=1:2
             if dc==1
                 for sub=1:2
                     if sub==1
-                        scan=z_totaloxy1_diss1_all;
+                        scan=z_totaloxy1_diss1;
                     else
-                        scan=z_totaloxy2_diss1_all;
+                        scan=z_totaloxy2_diss1;
                     end
                     n_m1_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss1,[1:3,5,8,10:12],:))))/length_diss1;
                     n_m1_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss1,[4,6,7,9,30:31],:))))/length_diss1;
@@ -273,9 +246,9 @@ if areaCorr
             else
                 for sub=1:2
                     if sub==1
-                        scan=z_totaloxy1_diss2_all;
+                        scan=z_totaloxy1_diss2;
                     else
-                        scan=z_totaloxy2_diss2_all;
+                        scan=z_totaloxy2_diss2;
                     end
                     n_m2_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss2,[1:3,5,8,10:12],:))))/length_diss2;
                     n_m2_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss2,[4,6,7,9,30:31],:))))/length_diss2;
