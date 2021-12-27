@@ -2,7 +2,8 @@
 % Dependencies for analyses: fdr_bky.m 
 % Dependencies for aimaging: spm12, xjview, and mni_coordinates (in folder)
 %
-% Data must be preprocessed before using this script
+% Data must be preprocessed before using this script (see
+% https://github.com/abinnquist/fNIRSpreProcessing)
 %
 % Before running the script make sure to choose the analyses you want to run 
 % by turning on (1) or turning off (0) the tasks you want to be performed. 
@@ -15,59 +16,61 @@
 %% Analyses to run
 % Set to zero if you do not want to perform the task
 compile=0;      % If the data has yet to be compiled after preprocessing 
-oxyOnly=0;      % 0=z_totaloxy; 1=z_oxy (rarely do we look only at deoxy)
+oxyOnly=1;      % 0=z_totaloxy; 1=z_oxy (rarely do we look only at deoxy not enough variation)
 chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
-areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
-FDR=0;          % False discovery rate correction
-writeXL=0;      % Writse the data to an excel sheet(s) in the preprocess_dir
-image=0;        % To image a conversation & dyad (will prompt you for which ones)
+areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
+FDR=1;          % False discovery rate correction
+writeXL=0;      % Write the data to an excel sheet(s) in the preprocess_dir
+image=0;        % Will prompt you in command window for mni, conversation & dyad 
 
 %% Load directory & varibles to use
 % You can set the directory w/ line 3 or use the get directory in line 4
-preprocess_dir= 'C:/Users/Mike/Desktop/Conflict data/preprocessedFiles_vccbsi'; %Specify path instead of selecting each run
-%preprocess_dir=uigetdir('','Choose Data Directory');
+%preprocess_dir= ''; %Specify path instead of selecting each run
+preprocess_dir=uigetdir('','Choose Data Directory');
 
 %% Properties
 % These can be changed based on the study and what FDR cutoff is prefered
 dataprefix='0';
-cutoff=0.01; %P-value to use as false discovery rate cut-off
-length_scan=2442; %At what frame do you want to trim all subjects (shortest convo)
-numdyads=54;
-numchans=42;
-numareas=3;
+ch_reject=3; % 1=no channel rejection, 2=reject noisy, 3=reject noisy & uncertain
+cutoff=0.01; % Cut-off p-value to use for FDR (false discovery rate) 
+length_scan=2442; % Frame to trim all subjects (shortest convo)
+numdyads=54; % Number of dyads
+numchans=42; % Number of channels
+numareas=3;  % Number of areas of the brain. Must match the combined ch's in the 'areaCorr' section
 
 %% Compile data for easier analysis
 % This will compile the two conversations of interest. Creates twelve 3D
 % matrices (time,channels,dyad) based on type of oxy (deoxy,oxy,totaloxy),  
 % discussion (affiliation and conflict), and subject (a and b), (3x2x2=12).
 if compile
-[z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,z_totaloxy1_2,z_deoxy2_1,...
-    z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,z_oxy2_2,z_totaloxy2_2]= compileNIRSdata(preprocess_dir,dataprefix);
+    [z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,...
+    z_totaloxy1_2,z_deoxy2_1,z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,...
+    z_oxy2_2,z_totaloxy2_2]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject);
 
-z_deoxy1_affil=z_deoxy1_1;
-z_deoxy2_affil=z_deoxy1_2;
-z_deoxy1_con=z_deoxy2_1;
-z_deoxy2_con=z_deoxy2_2;
-z_oxy1_affil=z_oxy1_1;
-z_oxy2_affil=z_oxy1_2;
-z_oxy1_con=z_oxy2_1;
-z_oxy2_con=z_oxy2_2;
-z_totaloxy1_affil=z_totaloxy1_1;
-z_totaloxy2_affil=z_totaloxy1_2;
-z_totaloxy1_con=z_totaloxy2_1;
-z_totaloxy2_con=z_totaloxy2_2;
+    z_deoxy1_affil=z_deoxy1_1;
+    z_deoxy2_affil=z_deoxy1_2;
+    z_deoxy1_con=z_deoxy2_1;
+    z_deoxy2_con=z_deoxy2_2;
+    z_oxy1_affil=z_oxy1_1;
+    z_oxy2_affil=z_oxy1_2;
+    z_oxy1_con=z_oxy2_1;
+    z_oxy2_con=z_oxy2_2;
+    z_totaloxy1_affil=z_totaloxy1_1;
+    z_totaloxy2_affil=z_totaloxy1_2;
+    z_totaloxy1_con=z_totaloxy2_1;
+    z_totaloxy2_con=z_totaloxy2_2;
 
-save(strcat(preprocess_dir,filesep,'Conflict_compiled'),'z_deoxy1_affil','z_deoxy2_affil',...
-'z_oxy1_affil','z_oxy2_affil','z_totaloxy1_affil','z_totaloxy2_affil','z_deoxy1_con','z_deoxy2_con',...
-'z_oxy1_con','z_oxy2_con','z_totaloxy1_con','z_totaloxy2_con');
+    save(strcat(preprocess_dir,filesep,'Conflict_compiled'),'z_deoxy1_affil','z_deoxy2_affil',...
+    'z_oxy1_affil','z_oxy2_affil','z_totaloxy1_affil','z_totaloxy2_affil','z_deoxy1_con','z_deoxy2_con',...
+    'z_oxy1_con','z_oxy2_con','z_totaloxy1_con','z_totaloxy2_con');
 
-    clearvars -except preprocess_dir numdyads numchans length_scan oxyOnly chCorr areaCorr cutoff FDR writeXL image
+    clearvars -except preprocess_dir numdyads numchans numareas length_scan oxyOnly chCorr areaCorr cutoff FDR writeXL image
 end
 
 %% Dyadic channel correlations 
 if chCorr    
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_oxy1_con_all','z_oxy2_con_all');
+        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_oxy1_con','z_oxy2_con');
         
         for dyad=1:numdyads
             for channel=1:numchans
@@ -81,7 +84,7 @@ if chCorr
             end
         end
     else
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con_all','z_totaloxy2_con_all');
+        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con','z_totaloxy2_con');
         
         for dyad=1:numdyads
             for channel=1:numchans
@@ -113,18 +116,19 @@ if chCorr
         'p_values_affil','p_values_con')
     end
     
-    clearvars -except preprocess_dir numdyads numchans length_scan oxyOnly areaCorr cutoff FDR writeXL image
+    clearvars -except preprocess_dir numdyads numchans numareas length_scan oxyOnly areaCorr cutoff FDR writeXL image
 end
 
 %% Mean Timecourse Synchrony per ROI per Dyad %%
 if areaCorr   
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_oxy1_con_all','z_oxy2_con_all')
+        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_oxy1_con','z_oxy2_con')
         
             %Get the mean for each area of interest
         z_con1_areas(:,1,:) = nanmean(z_oxy1_con(1:length_scan,7:14,:),2); %mpfc    
         z_con1_areas(:,2,:) = nanmean(z_oxy1_con(1:length_scan,[1:6,15:20],:),2); %lpfc
         z_con1_areas(:,3,:) = nanmean(z_oxy1_con(1:length_scan,[25:30,36:41],:),2); %tpj
+        
         z_con2_areas(:,1,:) = nanmean(z_oxy2_con(1:length_scan,7:14,:),2); 
         z_con2_areas(:,2,:) = nanmean(z_oxy2_con(1:length_scan,[1:6,15:20],:),2);
         z_con2_areas(:,3,:) = nanmean(z_oxy2_con(1:length_scan,[25:30,36:41],:),2);
@@ -141,12 +145,13 @@ if areaCorr
         end
         
     else
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con_all','z_totaloxy2_con_all')
+        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con','z_totaloxy2_con')
         
         %Get the mean for each area of interest
         z_con1_areas(:,1,:) = nanmean(z_totaloxy1_con(1:length_scan,7:14,:),2);
         z_con1_areas(:,2,:) = nanmean(z_totaloxy1_con(1:length_scan,[1:6,15:20],:),2);
         z_con1_areas(:,3,:) = nanmean(z_totaloxy1_con(1:length_scan,[25:30,36:41],:),2);
+        
         z_con2_areas(:,1,:) = nanmean(z_totaloxy2_con(1:length_scan,7:14,:),2); 
         z_con2_areas(:,2,:) = nanmean(z_totaloxy2_con(1:length_scan,[1:6,15:20],:),2);
         z_con2_areas(:,3,:) = nanmean(z_totaloxy2_con(1:length_scan,[25:30,36:41],:),2);
@@ -169,7 +174,7 @@ if areaCorr
     for dyad=1:numdyads
         for area=1:numareas
             if area==1
-                if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
+                if n_con_areas(dyad,area,1)>2 || n_con_areas(dyad,area,2)>2
                     nmask(dyad,area)=1;
                 else
                     nmask(dyad,area)=0;
@@ -204,10 +209,15 @@ if areaCorr
     Sig_r_conflict(:,:,3)=r_con_areas;
 
     save(strcat(preprocess_dir,filesep,'CF_areas'),'Sig_r_conflict')
-    
+     
     if writeXL
+        %z-scored for later comparison
+        Sig_r_conflict=atanh(Sig_r_conflict);
+    
         load(strcat('CF_NIRS',filesep,'CF_dyads.mat'))
+        dyads=table2array(dyads);
         areas=["Dyads","mPFC","lPFC","tpj"];
+        
         Sig_r_con1=array2table([dyads,Sig_r_conflict(:,:,1)],'VariableNames',areas);
         Sig_r_con2=array2table([dyads,Sig_r_conflict(:,:,2)],'VariableNames',areas);
         r_values_con=array2table([dyads,Sig_r_conflict(:,:,3)],'VariableNames',areas);
@@ -222,34 +232,21 @@ if areaCorr
     clearvars -except preprocess_dir numchans numdyads image
 end
 
-%% Imaging correlated areas
+%% Image NIRS results
+% The mni coordinates should be saved in the study folder or you can select
+% wherever you have it saved
 if image
-    load(strcat(pwd,filesep,'CF_NIRS',filesep,'CF_mnicoords.mat');
-    load(strcat(preprocess_dir,filesep,'CF_FDR_chCorrs.mat'));
-
-    %Choose the dyad and conversation you wish to image
-    convoQ = 'Do you want to image the affiliation or conflict Conversation? Enter 1 for affiliation or 2 for Conflict. \n';
-    convo = input(convoQ);
-    
-    if convo==1
-        convo2img=r_mask_affil_TO;
-        conversation='affil';
+    mniQ = 'Do you have the mni coordinates? 0=No, 1=Yes. \n';
+    mni = input(mniQ);
+    if mni==1
+        [mniCds, mniPath] = uigetfile('*.mat','Choose the MNI coordinates .mat');
+        mniCoords = strcat(mniPath,mniCds);
+        mniCoords=struct2array(load(mniCoords));
+        
+        fileMade=imageNIRSvals(mniCoords); % Helper function in cd
+        disp(fileMade)
     else
-        convo2img=r_mask_con_TO;
-        conversation='con';
+        disp('Must have an mni.mat to image data');
     end
-    
-    dyadQ = 'What dyad would you like to image (1 to 54)? \n';
-    dyad2img = input(dyadQ);
-
-    imgName=strcat('dyad_',num2str(dyad2img),'_',conversation,'.img');
-
-    % Which conversation correlations you want to visualize
-    convo_mask=convo2img(dyad2img,:)';
-
-    addpath(genpath(strcat(pwd,filesep,'xjview')))
-    addpath(genpath(strcat(pwd,filesep,'spm12')))
-    % Make sure to change the name of the file
-    nirs2img(imgName, CF_mnicoords, convo_mask, 0,0,0)
 end
 clear
