@@ -16,11 +16,11 @@
 %% Analyses to run
 % Set to zero if you do not want to perform the task
 compile=0;      % If the data has yet to be compiled after preprocessing 
-oxyOnly=1;      % 0=z_totaloxy; 1=z_oxy (rarely do we look only at deoxy not enough variation)
+oxyOnly=1;      % 0=z_deoxy; 1=z_oxy;
 chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
 areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
 FDR=1;          % False discovery rate correction
-writeXL=0;      % Write the data to an excel sheet(s) in the preprocess_dir
+writeXL=1;      % Write the data to an excel sheet(s) in the preprocess_dir
 image=0;        % Will prompt you in command window for mni, conversation & dyad 
 
 %% Load directory & varibles to use
@@ -36,7 +36,7 @@ cutoff=0.01; % Cut-off p-value to use for FDR (false discovery rate)
 length_scan=2442; % Frame to trim all subjects (shortest convo)
 numdyads=54; % Number of dyads
 numchans=42; % Number of channels
-numareas=3;  % Number of areas of the brain. Must match the combined ch's in the 'areaCorr' section
+numareas=6;  % 3=all ch's mPFC, lPFC & TPJ, 5=subsets, 6=Lateralization
 
 %% Compile data for easier analysis
 % This will compile the two conversations of interest. Creates twelve 3D
@@ -124,72 +124,169 @@ if areaCorr
     if oxyOnly
         load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_oxy1_con','z_oxy2_con')
         
+        if numareas==6 %lateralization of PFC & TPJ
             %Get the mean for each area of interest
-        z_con1_areas(:,1,:) = nanmean(z_oxy1_con(1:length_scan,7:14,:),2); %mpfc    
-        z_con1_areas(:,2,:) = nanmean(z_oxy1_con(1:length_scan,[1:6,15:20],:),2); %lpfc
-        z_con1_areas(:,3,:) = nanmean(z_oxy1_con(1:length_scan,[25:30,36:41],:),2); %tpj
-        
-        z_con2_areas(:,1,:) = nanmean(z_oxy2_con(1:length_scan,7:14,:),2); 
-        z_con2_areas(:,2,:) = nanmean(z_oxy2_con(1:length_scan,[1:6,15:20],:),2);
-        z_con2_areas(:,3,:) = nanmean(z_oxy2_con(1:length_scan,[25:30,36:41],:),2);
-        %Number of missing channels per subject
-        for sub=1:2
-            if sub==1
-                scan=z_oxy1_con;
-            else
-                scan=z_oxy2_con;
+            %left side
+            z_con1_areas(:,1,:) = nanmean(z_oxy1_con(1:length_scan,[8,11],:),2); %L-mpfc    
+            z_con1_areas(:,2,:) = nanmean(z_oxy1_con(1:length_scan,1:6,:),2); %L-lpfc
+            z_con1_areas(:,3,:) = nanmean(z_oxy1_con(1:length_scan,36:40,:),2); %L-tpj
+                %right side
+            z_con1_areas(:,4,:) = nanmean(z_oxy1_con(1:length_scan,[10,13],:),2); %R-mpfc    
+            z_con1_areas(:,5,:) = nanmean(z_oxy1_con(1:length_scan,15:20,:),2); %R-lpfc
+            z_con1_areas(:,6,:) = nanmean(z_oxy1_con(1:length_scan,25:29,:),2); %R-tpj
+
+                        %left side
+            z_con2_areas(:,1,:) = nanmean(z_oxy2_con(1:length_scan,[8,11],:),2); %mpfc    
+            z_con2_areas(:,2,:) = nanmean(z_oxy2_con(1:length_scan,1:6,:),2); %lpfc
+            z_con2_areas(:,3,:) = nanmean(z_oxy2_con(1:length_scan,36:40,:),2); %tpj
+                %right side
+            z_con2_areas(:,4,:) = nanmean(z_oxy2_con(1:length_scan,[10,13],:),2); %mpfc    
+            z_con2_areas(:,5,:) = nanmean(z_oxy2_con(1:length_scan,15:20,:),2); %lpfc
+            z_con2_areas(:,6,:) = nanmean(z_oxy2_con(1:length_scan,25:29,:),2); %tpj
+            
+            %Number of missing channels per subject
+            for sub=1:2
+                if sub==1
+                    scan=z_oxy1_con;
+                else
+                    scan=z_oxy2_con;
+                end
+                n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,[10,13],:))))/length_scan;
+                n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,15:20,:))))/length_scan;
+                n_con_areas(:,3,sub) = sum(sum(isnan(scan(1:length_scan,25:29,:))))/length_scan;
+                n_con_areas(:,4,sub) = sum(sum(isnan(scan(1:length_scan,[8,11],:))))/length_scan;
+                n_con_areas(:,5,sub) = sum(sum(isnan(scan(1:length_scan,1:6,:))))/length_scan;
+                n_con_areas(:,6,sub) = sum(sum(isnan(scan(1:length_scan,36:40,:))))/length_scan;
             end
-            n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,7:14,:))))/length_scan;
-            n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,[1:6,15:20],:))))/length_scan;
-            n_con_areas(:,3,sub) = sum(sum(isnan(scan(1:length_scan,[25:30,36:41],:))))/length_scan;
-        end
-        
+            
+            for dyad=1:numdyads
+                for area=1:numareas
+                    if area==1 || area==2
+                        if n_con_areas(dyad,area,1)>=1 || n_con_areas(dyad,area,2)>=1
+                            nmask(dyad,area)=1;
+                        else
+                            nmask(dyad,area)=0;
+                        end                
+                    else
+                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
+                            nmask(dyad,area)=1;
+                        else
+                            nmask(dyad,area)=0;
+                        end
+                    end
+                end
+            end
+            nmask=logical(nmask);
+            
+        elseif numareas==5 % Smaller subsets of PFC & TPJ
+            z_con1_areas(:,1,:) = nanmean(z_oxy1_con(1:length_scan,[11,13],:),2); %vmPFC    
+            z_con1_areas(:,2,:) = nanmean(z_oxy1_con(1:length_scan,[8,10],:),2); %dmPFC
+            z_con1_areas(:,3,:) = nanmean(z_oxy1_con(1:length_scan,[4,6,15,19],:),2); %vlPFC
+            z_con1_areas(:,4,:) = nanmean(z_oxy1_con(1:length_scan,[1,3,18,20],:),2); %dlPFC    
+            z_con1_areas(:,5,:) = nanmean(z_oxy1_con(1:length_scan,[25,28,37,39],:),2); %TPJ
+
+            z_con2_areas(:,1,:) = nanmean(z_oxy2_con(1:length_scan,[11,13],:),2); %vmPFC    
+            z_con2_areas(:,2,:) = nanmean(z_oxy2_con(1:length_scan,[8,10],:),2); %dmPFC
+            z_con2_areas(:,3,:) = nanmean(z_oxy2_con(1:length_scan,[4,6,15,19],:),2); %vlPFC
+            z_con2_areas(:,4,:) = nanmean(z_oxy2_con(1:length_scan,[1,3,18,20],:),2); %dlPFC    
+            z_con2_areas(:,5,:) = nanmean(z_oxy2_con(1:length_scan,[25,28,37,39],:),2); %TPJ
+            
+            for sub=1:2
+                if sub==1
+                    scan=z_oxy1_con;
+                else
+                    scan=z_oxy2_con;
+                end
+                n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,[11,13],:))))/length_scan;
+                n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,[8,10],:))))/length_scan;
+                n_con_areas(:,3,sub) = sum(sum(isnan(scan(1:length_scan,[4,6,15,19],:))))/length_scan;
+                n_con_areas(:,4,sub) = sum(sum(isnan(scan(1:length_scan,[1,3,18,20],:))))/length_scan;
+                n_con_areas(:,5,sub) = sum(sum(isnan(scan(1:length_scan,[25,28,37,39],:))))/length_scan;
+            end
+            
+            for dyad=1:numdyads
+                for area=1:numareas
+                    if area==1
+                        if n_con_areas(dyad,area,1)>=1 || n_con_areas(dyad,area,2)>=1
+                            nmask(dyad,area)=1;
+                        else
+                            nmask(dyad,area)=0;
+                        end                
+                    else
+                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
+                            nmask(dyad,area)=1;
+                        else
+                            nmask(dyad,area)=0;
+                        end
+                    end
+                end
+            end
+            nmask=logical(nmask);
+          
+        elseif numareas==3 %including all channels fro pfc & tpj
+            z_con1_areas(:,1,:) = nanmean(z_oxy1_con(1:length_scan,7:14,:),2);
+            z_con1_areas(:,2,:) = nanmean(z_oxy1_con(1:length_scan,[1:6,15:20],:),2);
+            z_con1_areas(:,3,:) = nanmean(z_oxy1_con(1:length_scan,[25:30,36:41],:),2);
+
+            z_con2_areas(:,1,:) = nanmean(z_oxy2_con(1:length_scan,7:14,:),2); 
+            z_con2_areas(:,2,:) = nanmean(z_oxy2_con(1:length_scan,[1:6,15:20],:),2);
+            z_con2_areas(:,3,:) = nanmean(z_oxy2_con(1:length_scan,[25:30,36:41],:),2);
+            
+            for sub=1:2
+                if sub==1
+                    scan=z_deoxy1_con;
+                else
+                    scan=z_deoxy2_con;
+                end
+                n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,7:14,:))))/length_scan;
+                n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,[1:6,15:20],:))))/length_scan;
+                n_con_areas(:,3,sub) = sum(sum(isnan(scan(1:length_scan,[25:30,36:41],:))))/length_scan;
+            end
+        end 
     else
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con','z_totaloxy2_con')
+        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_deoxy1_con','z_deoxy2_con')
         
         %Get the mean for each area of interest
-        z_con1_areas(:,1,:) = nanmean(z_totaloxy1_con(1:length_scan,7:14,:),2);
-        z_con1_areas(:,2,:) = nanmean(z_totaloxy1_con(1:length_scan,[1:6,15:20],:),2);
-        z_con1_areas(:,3,:) = nanmean(z_totaloxy1_con(1:length_scan,[25:30,36:41],:),2);
+        z_con1_areas(:,1,:) = nanmean(z_deoxy1_con(1:length_scan,7:14,:),2);
+        z_con1_areas(:,2,:) = nanmean(z_deoxy1_con(1:length_scan,[1:6,15:20],:),2);
+        z_con1_areas(:,3,:) = nanmean(z_deoxy1_con(1:length_scan,[25:30,36:41],:),2);
         
-        z_con2_areas(:,1,:) = nanmean(z_totaloxy2_con(1:length_scan,7:14,:),2); 
-        z_con2_areas(:,2,:) = nanmean(z_totaloxy2_con(1:length_scan,[1:6,15:20],:),2);
-        z_con2_areas(:,3,:) = nanmean(z_totaloxy2_con(1:length_scan,[25:30,36:41],:),2);
+        z_con2_areas(:,1,:) = nanmean(z_deoxy2_con(1:length_scan,7:14,:),2); 
+        z_con2_areas(:,2,:) = nanmean(z_deoxy2_con(1:length_scan,[1:6,15:20],:),2);
+        z_con2_areas(:,3,:) = nanmean(z_deoxy2_con(1:length_scan,[25:30,36:41],:),2);
         %Number of missing channels per subject
         for sub=1:2
             if sub==1
-                scan=z_totaloxy1_con;
+                scan=z_deoxy1_con;
             else
-                scan=z_totaloxy2_con;
+                scan=z_deoxy2_con;
             end
             n_con_areas(:,1,sub) = sum(sum(isnan(scan(1:length_scan,7:14,:))))/length_scan;
             n_con_areas(:,2,sub) = sum(sum(isnan(scan(1:length_scan,[1:6,15:20],:))))/length_scan;
             n_con_areas(:,3,sub) = sum(sum(isnan(scan(1:length_scan,[25:30,36:41],:))))/length_scan;
         end
-    end
-
-    %Creates mask for missing channels based on both subjects within each
-    %dyad. Anything over 1/4 missing channels mask as 0. Number of channels:
-    %mpfc[8/4=2chs],lpfc[12/4=3chs],tpj[12/4=3chs]
-    for dyad=1:numdyads
-        for area=1:numareas
-            if area==1
-                if n_con_areas(dyad,area,1)>2 || n_con_areas(dyad,area,2)>2
-                    nmask(dyad,area)=1;
+        
+       %Creates mask for missing channels 
+        for dyad=1:numdyads
+            for area=1:numareas
+                if area==1
+                    if n_con_areas(dyad,area,1)>2 || n_con_areas(dyad,area,2)>2
+                        nmask(dyad,area)=1;
+                    else
+                        nmask(dyad,area)=0;
+                    end                
                 else
-                    nmask(dyad,area)=0;
-                end                
-            else
-                if n_con_areas(dyad,area,1)>4 || n_con_areas(dyad,area,2)>4
-                    nmask(dyad,area)=1;
-                else
-                    nmask(dyad,area)=0;
+                    if n_con_areas(dyad,area,1)>4 || n_con_areas(dyad,area,2)>4
+                        nmask(dyad,area)=1;
+                    else
+                        nmask(dyad,area)=0;
+                    end
                 end
             end
         end
+        nmask=logical(nmask);
     end
-    nmask=logical(nmask);
-    
+     
     % Correlation per Conversation per ROI per Dyad 
     for area=1:numareas
         for dyad=1:numdyads
@@ -213,15 +310,20 @@ if areaCorr
     if writeXL
         %z-scored for later comparison
         Sig_r_conflict=atanh(Sig_r_conflict);
-    
+        
         load(strcat('CF_NIRS',filesep,'CF_dyads.mat'))
-        dyads=table2array(dyads);
-        areas=["Dyads","mPFC","lPFC","tpj"];
+        if area==3
+            areas=["Dyads","mPFC","lPFC","tpj"];
+        elseif area==5
+            areas=["Dyads","vmPFC","dmPFC","vlPFC","dlPFC","tpj"];
+        elseif area==6
+            areas=["Dyads","L-mPFC","L-lPFC","L-tpj","R-mPFC","R-lPFC","R-tpj"];
+        end
         
         Sig_r_con1=array2table([dyads,Sig_r_conflict(:,:,1)],'VariableNames',areas);
         Sig_r_con2=array2table([dyads,Sig_r_conflict(:,:,2)],'VariableNames',areas);
         r_values_con=array2table([dyads,Sig_r_conflict(:,:,3)],'VariableNames',areas);
-
+        
         %File name based on FDR used
         xlName=strcat(preprocess_dir,filesep,'Sig_mask_',num2str(cutoff),'.xls'); 
         writetable(r_values_con,xlName,'sheet','r_vals')  %r-vals no mask or FDR
