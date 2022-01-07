@@ -43,31 +43,31 @@ numareas=6; % 4=Right Lateralization; 5=mPFC, lPFC, PMC, SMS & TPJ; 6=vmPFC, dmP
 
 %% Compile subject data %%
 % Compiles the two conversations of interest. Creates a 3D
-% matrix for type of oxy (deoxy,oxy,totaloxy), discussion (1 and 2),  
-% and subject (1 and 2) for twelve (3x2x2=12) 3D matrices (time,channels,dyad)
+% matrix for type of oxy (deoxy & oxy), discussion (1 and 2),  
+% and subject (1 and 2) for eight (2x2x2=12) 3D matrices (time,channels,dyad)
 if compile
-    [z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,z_totaloxy1_2,...
-        z_deoxy2_1,z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,z_oxy2_2,...
-        z_totaloxy2_2] = compileNIRSdata(preprocess_dir,dataprefix,ch_reject);
+    numScans=2;
+    [z_deoxy1_1,z_oxy1_1,z_deoxy1_2,z_oxy1_2,z_deoxy2_1,z_oxy2_1,z_deoxy2_2,...
+    z_oxy2_2,~,~,~,~,~,~,~,~,~,~,~,~]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
 
-    z_deoxy1_diss1=z_deoxy1_1;
-    z_deoxy2_diss1=z_deoxy1_2;
-    z_deoxy1_diss2=z_deoxy2_1;
-    z_deoxy2_diss2=z_deoxy2_2;
+    %Discussion 1
+    z_deoxy1_diss1=z_deoxy1_1; % Subject 1
     z_oxy1_diss1=z_oxy1_1;
-    z_oxy2_diss1=z_oxy1_2;
-    z_oxy1_diss2=z_oxy2_1;
+    
+    z_deoxy2_diss1=z_deoxy2_1; % Subject 2
+    z_oxy2_diss1=z_oxy2_1;
+    
+    %Discussion 2
+    z_deoxy1_diss2=z_deoxy1_2; % Subject 1
+    z_oxy1_diss2=z_oxy1_2;
+    
+    z_deoxy2_diss2=z_deoxy2_2; % Subject 2
     z_oxy2_diss2=z_oxy2_2;
-    z_totaloxy1_diss1=z_totaloxy1_1;
-    z_totaloxy2_diss1=z_totaloxy1_2;
-    z_totaloxy1_diss2=z_totaloxy2_1;
-    z_totaloxy2_diss2=z_totaloxy2_2;
+
     %Save a .mat file to the preprocessing directory 
     save(strcat(preprocess_dir,filesep,'SS_compiled'),'z_deoxy1_diss1','z_deoxy2_diss1',...
-    'z_oxy1_diss1','z_oxy2_diss1','z_totaloxy1_diss1','z_totaloxy2_diss1',...
-    'z_deoxy1_diss2','z_deoxy2_diss2','z_oxy1_diss2','z_oxy2_diss2',...
-    'z_totaloxy1_diss2','z_totaloxy2_diss2');
-
+    'z_oxy1_diss1','z_oxy2_diss1','z_deoxy1_diss2','z_deoxy2_diss2','z_oxy1_diss2','z_oxy2_diss2');
+    
     clearvars -except preprocess_dir numdyads numchans length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR image writeXL
 end
 
@@ -340,7 +340,7 @@ if areaCorr
         
         for dyad=1:numdyads
             for area=1:numareas 
-                if numareas==5
+                if numareas==5 %for all areas
                     if area==1 || area==2
                         if convoMask(dyad,area,1)>2 || convoMask(dyad,area,2)>2
                             nmask(dyad,area,convo)=1;
@@ -360,7 +360,7 @@ if areaCorr
                             nmask(dyad,area,convo)=0;
                         end
                     end
-                else   %for lateralization or subareas               
+                else   % for lateralization or subareas               
                     if area==4 || area==5
                         if convoMask(dyad,area,1)>1 || convoMask(dyad,area,2)>1
                             nmask(dyad,area,convo)=1;
