@@ -36,33 +36,33 @@ cutoff=0.01; % Cut-off p-value to use for FDR (false discovery rate)
 length_scan=2442; % Frame to trim all subjects (shortest convo)
 numdyads=54; % Number of dyads
 numchans=42; % Number of channels
-numareas=6;  % 3=all ch's mPFC, lPFC & TPJ, 5=subsets, 6=Lateralization
+numareas=5;  % 3=all ch's mPFC, lPFC & TPJ, 5=subsets, 6=Lateralization
 
 %% Compile data for easier analysis
 % This will compile the two conversations of interest. Creates twelve 3D
-% matrices (time,channels,dyad) based on type of oxy (deoxy,oxy,totaloxy),  
-% discussion (affiliation and conflict), and subject (a and b), (3x2x2=12).
+% matrices (time,channels,dyad) based on type of oxy (deoxy & oxy),  
+% discussion (affiliation and conflict), and subject (a and b), (2x2x2=8).
 if compile
-    [z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,...
-    z_totaloxy1_2,z_deoxy2_1,z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,...
-    z_oxy2_2,z_totaloxy2_2]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject);
+    numScans=2;
+    [z_deoxy1_1,z_oxy1_1,z_deoxy1_2,z_oxy1_2,z_deoxy2_1,z_oxy2_1,z_deoxy2_2,...
+    z_oxy2_2,~,~,~,~,~,~,~,~,~,~,~,~]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
 
-    z_deoxy1_affil=z_deoxy1_1;
-    z_deoxy2_affil=z_deoxy1_2;
-    z_deoxy1_con=z_deoxy2_1;
-    z_deoxy2_con=z_deoxy2_2;
+    %affiliation
+    z_deoxy1_affil=z_deoxy1_1; %Subject 1 
     z_oxy1_affil=z_oxy1_1;
-    z_oxy2_affil=z_oxy1_2;
-    z_oxy1_con=z_oxy2_1;
+        
+    z_deoxy2_affil=z_deoxy2_1; %Subject 2 
+    z_oxy2_affil=z_oxy2_1;
+    
+    % Conflict
+    z_deoxy1_con=z_deoxy1_2; %Subject 1
+    z_oxy1_con=z_oxy1_2;    
+    
+    z_deoxy2_con=z_deoxy2_2;    %Subject 2 
     z_oxy2_con=z_oxy2_2;
-    z_totaloxy1_affil=z_totaloxy1_1;
-    z_totaloxy2_affil=z_totaloxy1_2;
-    z_totaloxy1_con=z_totaloxy2_1;
-    z_totaloxy2_con=z_totaloxy2_2;
 
     save(strcat(preprocess_dir,filesep,'Conflict_compiled'),'z_deoxy1_affil','z_deoxy2_affil',...
-    'z_oxy1_affil','z_oxy2_affil','z_totaloxy1_affil','z_totaloxy2_affil','z_deoxy1_con','z_deoxy2_con',...
-    'z_oxy1_con','z_oxy2_con','z_totaloxy1_con','z_totaloxy2_con');
+    'z_oxy1_affil','z_oxy2_affil','z_deoxy1_con','z_deoxy2_con','z_oxy1_con','z_oxy2_con');
 
     clearvars -except preprocess_dir numdyads numchans numareas length_scan oxyOnly chCorr areaCorr cutoff FDR writeXL image
 end
@@ -74,26 +74,26 @@ if chCorr
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_totaloxy1_affil(1:length_scan,channel,dyad);
-                b = z_totaloxy2_affil(1:length_scan,channel,dyad);
-                [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
-
-                c = z_totaloxy1_con(1:length_scan,channel,dyad);
-                d = z_totaloxy2_con(1:length_scan,channel,dyad);
-                [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
-            end
-        end
-    else
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_totaloxy1_con','z_totaloxy2_con');
-        
-        for dyad=1:numdyads
-            for channel=1:numchans
                 a = z_oxy1_affil(1:length_scan,channel,dyad);
                 b = z_oxy2_affil(1:length_scan,channel,dyad);
                 [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
 
-                c = z_totaloxy1_con(1:length_scan,channel,dyad);
-                d = z_totaloxy2_con(1:length_scan,channel,dyad);
+                c = z_oxy1_con(1:length_scan,channel,dyad);
+                d = z_oxy2_con(1:length_scan,channel,dyad);
+                [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
+            end
+        end
+    else
+        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'z_deoxy1_con','z_deoxy2_con');
+        
+        for dyad=1:numdyads
+            for channel=1:numchans
+                a = z_deoxy1_affil(1:length_scan,channel,dyad);
+                b = z_deoxy2_affil(1:length_scan,channel,dyad);
+                [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
+
+                c = z_deoxy1_con(1:length_scan,channel,dyad);
+                d = z_deoxy2_con(1:length_scan,channel,dyad);
                 [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
             end
         end
