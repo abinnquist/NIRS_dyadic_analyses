@@ -1,9 +1,9 @@
-%Compiles the data for two subjects within a dyad and two conversations
-%each. Compiles the "nouncertainchannels" from preprocessing. 
+%Compiles the data for two subjects within a dyad and two conversations each. 
+%Compiles your choice of channel rejection from preprocessing (i.e. ch_reject) 
 
-function [z_deoxy1_1,z_oxy1_1,z_totaloxy1_1,z_deoxy1_2,z_oxy1_2,...
-    z_totaloxy1_2,z_deoxy2_1,z_oxy2_1,z_totaloxy2_1,z_deoxy2_2,...
-    z_oxy2_2,z_totaloxy2_2]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject)
+function [z_deoxy1_1,z_oxy1_1,z_deoxy1_2,z_oxy1_2,z_deoxy2_1,z_oxy2_1,z_deoxy2_2,...
+    z_oxy2_2,z_deoxy1_3,z_oxy1_3,z_deoxy2_3,z_oxy2_3,z_deoxy1_4,z_oxy1_4,...
+    z_deoxy2_4,z_oxy2_4,z_deoxy1_5,z_oxy1_5,z_deoxy2_5,z_oxy2_5]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
 
 %find all of the preprocessed folders
 currdir=dir(strcat(preprocess_dir,filesep,dataprefix,'*'));
@@ -19,18 +19,36 @@ currdir=dir(strcat(preprocess_dir,filesep,dataprefix,'*'));
 
             if ~isempty(subfolder) && sj==1
                 subfiles=dir(strcat(subfolder(1).folder,filesep,subfolder(1).name,filesep,'*.mat'));
-                load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) %Compile the "nouncertain channels"
+                load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
                 length_convo=length(z_oxy);
                 z_deoxy1_1(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
                 z_oxy1_1(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-                z_totaloxy1_1(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
 
                 subfiles=dir(strcat(subfolder(2).folder,filesep,subfolder(2).name,filesep,'*.mat'));
                 load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name))
                 length_convo=length(z_oxy);
                 z_deoxy1_2(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
                 z_oxy1_2(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-                z_totaloxy1_2(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
+                
+                if numScans>2
+                    subfiles=dir(strcat(subfolder(3).folder,filesep,subfolder(3).name,filesep,'*.mat'));
+                    load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
+                    length_convo=length(z_oxy);
+                    z_deoxy1_3(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
+                    z_oxy1_3(1:length_convo,:,i)=z_oxy(1:length_convo,:);
+                    
+                    subfiles=dir(strcat(subfolder(4).folder,filesep,subfolder(4).name,filesep,'*.mat'));
+                    load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
+                    length_convo=length(z_oxy);
+                    z_deoxy1_4(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
+                    z_oxy1_4(1:length_convo,:,i)=z_oxy(1:length_convo,:);
+                    
+                    subfiles=dir(strcat(subfolder(5).folder,filesep,subfolder(5).name,filesep,'*.mat'));
+                    load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
+                    length_convo=length(z_oxy);
+                    z_deoxy1_5(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
+                    z_oxy1_5(1:length_convo,:,i)=z_oxy(1:length_convo,:);
+                end
 
             elseif ~isempty(subfolder) && sj==2
                 subfiles=dir(strcat(subfolder(1).folder,filesep,subfolder(1).name,filesep,'*.mat'));
@@ -38,14 +56,32 @@ currdir=dir(strcat(preprocess_dir,filesep,dataprefix,'*'));
                 length_convo=length(z_oxy);
                 z_deoxy2_1(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
                 z_oxy2_1(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-                z_totaloxy2_1(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
 
                 subfiles=dir(strcat(subfolder(2).folder,filesep,subfolder(2).name,filesep,'*.mat'));
                 load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name))
                 length_convo=length(z_oxy);
                 z_deoxy2_2(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
                 z_oxy2_2(1:length_convo,:,i)=z_oxy(1:length_convo,:);
-                z_totaloxy2_2(1:length_convo,:,i)=z_totaloxy(1:length_convo,:);
+                
+                if numScans>2
+                    subfiles=dir(strcat(subfolder(3).folder,filesep,subfolder(3).name,filesep,'*.mat'));
+                    load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
+                    length_convo=length(z_oxy);
+                    z_deoxy2_3(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
+                    z_oxy2_3(1:length_convo,:,i)=z_oxy(1:length_convo,:);
+                    
+                    subfiles=dir(strcat(subfolder(4).folder,filesep,subfolder(4).name,filesep,'*.mat'));
+                    load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
+                    length_convo=length(z_oxy);
+                    z_deoxy2_4(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
+                    z_oxy2_4(1:length_convo,:,i)=z_oxy(1:length_convo,:);
+                    
+                    subfiles=dir(strcat(subfolder(5).folder,filesep,subfolder(5).name,filesep,'*.mat'));
+                    load(strcat(subfiles(1).folder,filesep,subfiles(ch_reject).name)) 
+                    length_convo=length(z_oxy);
+                    z_deoxy2_5(1:length_convo,:,i)=z_deoxy(1:length_convo,:);
+                    z_oxy2_5(1:length_convo,:,i)=z_oxy(1:length_convo,:);
+                end
             end
         end
     end
