@@ -17,12 +17,12 @@
 % sure to specify the location of the preprocessed NIRS data
 %% Analyses to run
 % Set to zero if you do not want to perform the task
-compile=0;      % If the data has yet to be compiled into all dyad matices
+compile=1;      % If the data has yet to be compiled into all dyad matices
 oxyOnly=1;      % 0=z_deoxy; 1=z_oxy
 chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
-areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
-FDR=1;          % False discovery rate correction
-writeXL=1;      % If you want to write the data to an excel sheet(s)
+areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
+FDR=0;          % False discovery rate correction
+writeXL=0;      % If you want to write the data to an excel sheet(s)
 image=0;        % Will prompt you in command window for mni, conversation & dyad 
 
 %% Set the Directory
@@ -47,60 +47,42 @@ numareas=6; % 4=Right Lateralization; 5=mPFC, lPFC, PMC, SMS & TPJ; 6=vmPFC, dmP
 % and subject (1 and 2) for eight (2x2x2=12) 3D matrices (time,channels,dyad)
 if compile
     numScans=2;
-    [z_deoxy1_1,z_oxy1_1,z_deoxy1_2,z_oxy1_2,z_deoxy2_1,z_oxy2_1,z_deoxy2_2,...
-    z_oxy2_2,~,~,~,~,~,~,~,~,~,~,~,~]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
-
-    %Discussion 1
-    z_deoxy1_diss1=z_deoxy1_1; % Subject 1
-    z_oxy1_diss1=z_oxy1_1;
-    
-    z_deoxy2_diss1=z_deoxy2_1; % Subject 2
-    z_oxy2_diss1=z_oxy2_1;
-    
-    %Discussion 2
-    z_deoxy1_diss2=z_deoxy1_2; % Subject 1
-    z_oxy1_diss2=z_oxy1_2;
-    
-    z_deoxy2_diss2=z_deoxy2_2; % Subject 2
-    z_oxy2_diss2=z_oxy2_2;
+    [deoxy3D,oxy3D]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans);
 
     %Save a .mat file to the preprocessing directory 
-    save(strcat(preprocess_dir,filesep,'SS_compiled'),'z_deoxy1_diss1','z_deoxy2_diss1',...
-    'z_oxy1_diss1','z_oxy2_diss1','z_deoxy1_diss2','z_deoxy2_diss2','z_oxy1_diss2','z_oxy2_diss2');
+    save(strcat(preprocess_dir,filesep,'SS_compiled'),'deoxy3D','oxy3D');
     
-    clearvars -except preprocess_dir numdyads numchans length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR image writeXL
+    clearvars -except preprocess_dir numdyads numchans numareas length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR image writeXL
 end
 
 %% Compute basic channel correlations %%
 % Computes the matched channel correlations for each dyad and conversation. 
 if chCorr
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'z_oxy1_diss1',...
-            'z_oxy2_diss1','z_oxy1_diss2','z_oxy2_diss2');
+        load(strcat(preprocess_dir,filesep,'SS_compiled'),'oxy3D');
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_oxy1_diss1(1:length_diss1,channel,dyad);
-                b = z_oxy2_diss1(1:length_diss1,channel,dyad);
+                a = oxy3D(1).sub1(1:length_diss1,channel,dyad);
+                b = oxy3D(1).sub2(1:length_diss1,channel,dyad);
                 [r_values_diss1(dyad,channel),p_values_diss1(dyad,channel)] = corr(a,b);
 
-                c = z_oxy1_diss2(1:length_diss2,channel,dyad);
-                d = z_oxy2_diss2(1:length_diss2,channel,dyad);
+                c = oxy3D(2).sub1(1:length_diss2,channel,dyad);
+                d = oxy3D(2).sub2(1:length_diss2,channel,dyad);
                 [r_values_diss2(dyad,channel),p_values_diss2(dyad,channel)] = corr(c,d);
             end
         end
     else
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'z_deoxy1_diss1',...
-            'z_deoxy2_diss1','z_deoxy1_diss2','z_deoxy2_diss2');
+        load(strcat(preprocess_dir,filesep,'SS_compiled'),'deoxy3D');
         
         for dyad=1:numdyads
             for channel=1:numchans
-                a = z_deoxy1_diss1(:,channel,dyad);
-                b = z_deoxy2_diss1(:,channel,dyad);
+                a = deoxy3D(1).sub1(:,channel,dyad);
+                b = deoxy3D(1).sub2(:,channel,dyad);
                 [r_values_diss1(dyad,channel),p_values_diss1(dyad,channel)] = corr(a,b);
 
-                c = z_deoxy1_diss2(:,channel,dyad);
-                d = z_deoxy2_diss2(:,channel,dyad);
+                c = deoxy3D(2).sub1(:,channel,dyad);
+                d = deoxy3D(2).sub2(:,channel,dyad);
                 [r_values_diss2(dyad,channel),p_values_diss2(dyad,channel)] = corr(c,d);
             end
         end
@@ -138,7 +120,7 @@ if chCorr
         end
     end
 
-    clearvars -except preprocess_dir numdyads numchans length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR image writeXL
+    clearvars -except preprocess_dir numdyads numchans numareas length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR image writeXL
 end
 
 %% Mean Timecourse Synchrony per ROI per Dyad %%
@@ -166,44 +148,43 @@ if areaCorr
     end   
     
     if oxyOnly
-    load(strcat(preprocess_dir,filesep,'SS_compiled'),'z_oxy1_diss1',...
-        'z_oxy2_diss1','z_oxy1_diss2','z_oxy2_diss2');
+        load(strcat(preprocess_dir,filesep,'SS_compiled'),'oxy3D');
 
-        z1_diss1_areas(:,1,:) = nanmean(z_oxy1_diss1(1:length_diss1,area1,:),2);   
-        z1_diss1_areas(:,2,:) = nanmean(z_oxy1_diss1(1:length_diss1,area2,:),2); 
-        z1_diss1_areas(:,3,:) = nanmean(z_oxy1_diss1(1:length_diss1,area3,:),2); 
-        z1_diss1_areas(:,4,:) = nanmean(z_oxy1_diss1(1:length_diss1,area4,:),2); 
+        z1_diss1_areas(:,1,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area1,:),2);   
+        z1_diss1_areas(:,2,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area2,:),2); 
+        z1_diss1_areas(:,3,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area3,:),2); 
+        z1_diss1_areas(:,4,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area4,:),2); 
 
-        z2_diss1_areas(:,1,:) = nanmean(z_oxy2_diss1(1:length_diss1,area1,:),2); 
-        z2_diss1_areas(:,2,:) = nanmean(z_oxy2_diss1(1:length_diss1,area2,:),2);
-        z2_diss1_areas(:,3,:) = nanmean(z_oxy2_diss1(1:length_diss1,area3,:),2);
-        z2_diss1_areas(:,4,:) = nanmean(z_oxy2_diss1(1:length_diss1,area4,:),2);
+        z2_diss1_areas(:,1,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area1,:),2); 
+        z2_diss1_areas(:,2,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area2,:),2);
+        z2_diss1_areas(:,3,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area3,:),2);
+        z2_diss1_areas(:,4,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area4,:),2);
 
-        z1_diss2_areas(:,1,:) = nanmean(z_oxy1_diss2(1:length_diss2,area1,:),2);  
-        z1_diss2_areas(:,2,:) = nanmean(z_oxy1_diss2(1:length_diss2,area2,:),2);
-        z1_diss2_areas(:,3,:) = nanmean(z_oxy1_diss2(1:length_diss2,area3,:),2); 
-        z1_diss2_areas(:,4,:) = nanmean(z_oxy1_diss2(1:length_diss2,area4,:),2);
+        z1_diss2_areas(:,1,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area1,:),2);  
+        z1_diss2_areas(:,2,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area2,:),2);
+        z1_diss2_areas(:,3,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area3,:),2); 
+        z1_diss2_areas(:,4,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area4,:),2);
 
-        z2_diss2_areas(:,1,:) = nanmean(z_oxy2_diss2(1:length_diss2,area1,:),2); 
-        z2_diss2_areas(:,2,:) = nanmean(z_oxy2_diss2(1:length_diss2,area2,:),2);
-        z2_diss2_areas(:,3,:) = nanmean(z_oxy2_diss2(1:length_diss2,area3,:),2);
-        z2_diss2_areas(:,4,:) = nanmean(z_oxy2_diss2(1:length_diss2,area4,:),2);
+        z2_diss2_areas(:,1,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area1,:),2); 
+        z2_diss2_areas(:,2,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area2,:),2);
+        z2_diss2_areas(:,3,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area3,:),2);
+        z2_diss2_areas(:,4,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area4,:),2);
         
         if numareas==5
-            z1_diss1_areas(:,5,:) = nanmean(z_oxy1_diss1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(z_oxy2_diss1(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(z_oxy1_diss2(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(z_oxy2_diss2(1:length_diss2,area5,:),2);
+            z1_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area5,:),2);
+            z2_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area5,:),2);
+            z1_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area5,:),2);
+            z2_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area5,:),2);
         elseif numareas==6
-            z1_diss1_areas(:,5,:) = nanmean(z_oxy1_diss1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(z_oxy2_diss1(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(z_oxy1_diss2(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(z_oxy2_diss2(1:length_diss2,area5,:),2);
+            z1_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area5,:),2);
+            z2_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area5,:),2);
+            z1_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area5,:),2);
+            z2_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area5,:),2);
             
-            z1_diss1_areas(:,6,:) = nanmean(z_oxy1_diss1(1:length_diss1,area6,:),2);
-            z2_diss1_areas(:,6,:) = nanmean(z_oxy2_diss1(1:length_diss1,area6,:),2);
-            z1_diss2_areas(:,6,:) = nanmean(z_oxy1_diss2(1:length_diss2,area6,:),2);
-            z2_diss2_areas(:,6,:) = nanmean(z_oxy2_diss2(1:length_diss2,area6,:),2);
+            z1_diss1_areas(:,6,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area6,:),2);
+            z2_diss1_areas(:,6,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area6,:),2);
+            z1_diss2_areas(:,6,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area6,:),2);
+            z2_diss2_areas(:,6,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area6,:),2);
         end
 
         %Number of missing channels per subject, per area of interest
@@ -211,9 +192,9 @@ if areaCorr
             if dc==1
                 for sub=1:2
                     if sub==1
-                        scan=z_oxy1_diss1;
+                        scan=oxy3D(1).sub1;
                     else
-                        scan=z_oxy2_diss1;
+                        scan=oxy3D(1).sub2;
                     end
                     n_m1_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss1,area1,:))))/length_diss1;
                     n_m1_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss1,area2,:))))/length_diss1;
@@ -229,9 +210,9 @@ if areaCorr
             else
                 for sub=1:2
                     if sub==1
-                        scan=z_oxy1_diss2;
+                        scan=oxy3D(2).sub1;
                     else
-                        scan=z_oxy2_diss2;
+                        scan=oxy3D(2).sub2;
                     end
                     n_m2_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss2,area1,:))))/length_diss2;
                     n_m2_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss2,area2,:))))/length_diss2;
@@ -248,44 +229,43 @@ if areaCorr
         end
       
     else
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'z_deoxy1_diss1',...
-            'z_deoxy2_diss1','z_deoxy1_diss2','z_deoxy2_diss2');
+        load(strcat(preprocess_dir,filesep,'SS_compiled'),'deoxy3D');
 
-        z1_diss1_areas(:,1,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area1,:),2);   
-        z1_diss1_areas(:,2,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area2,:),2); 
-        z1_diss1_areas(:,3,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area3,:),2); 
-        z1_diss1_areas(:,4,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area4,:),2); 
+        z1_diss1_areas(:,1,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area1,:),2);   
+        z1_diss1_areas(:,2,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area2,:),2); 
+        z1_diss1_areas(:,3,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area3,:),2); 
+        z1_diss1_areas(:,4,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area4,:),2); 
 
-        z2_diss1_areas(:,1,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area1,:),2); 
-        z2_diss1_areas(:,2,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area2,:),2);
-        z2_diss1_areas(:,3,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area3,:),2);
-        z2_diss1_areas(:,4,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area4,:),2);
+        z2_diss1_areas(:,1,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area1,:),2); 
+        z2_diss1_areas(:,2,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area2,:),2);
+        z2_diss1_areas(:,3,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area3,:),2);
+        z2_diss1_areas(:,4,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area4,:),2);
 
-        z1_diss2_areas(:,1,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area1,:),2);  
-        z1_diss2_areas(:,2,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area2,:),2);
-        z1_diss2_areas(:,3,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area3,:),2); 
-        z1_diss2_areas(:,4,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area4,:),2);
+        z1_diss2_areas(:,1,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area1,:),2);  
+        z1_diss2_areas(:,2,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area2,:),2);
+        z1_diss2_areas(:,3,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area3,:),2); 
+        z1_diss2_areas(:,4,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area4,:),2);
 
-        z2_diss2_areas(:,1,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area1,:),2); 
-        z2_diss2_areas(:,2,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area2,:),2);
-        z2_diss2_areas(:,3,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area3,:),2);
-        z2_diss2_areas(:,4,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area4,:),2);
+        z2_diss2_areas(:,1,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area1,:),2); 
+        z2_diss2_areas(:,2,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area2,:),2);
+        z2_diss2_areas(:,3,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area3,:),2);
+        z2_diss2_areas(:,4,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area4,:),2);
         
         if numareas==5
-            z1_diss1_areas(:,5,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area5,:),2);
+            z1_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area5,:),2);
+            z2_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area5,:),2);
+            z1_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area5,:),2);
+            z2_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area5,:),2);
         elseif numareas==6
-            z1_diss1_areas(:,5,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area5,:),2);
+            z1_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area5,:),2);
+            z2_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area5,:),2);
+            z1_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area5,:),2);
+            z2_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area5,:),2);
             
-            z1_diss1_areas(:,6,:) = nanmean(z_deoxy1_diss1(1:length_diss1,area6,:),2);
-            z2_diss1_areas(:,6,:) = nanmean(z_deoxy2_diss1(1:length_diss1,area6,:),2);
-            z1_diss2_areas(:,6,:) = nanmean(z_deoxy1_diss2(1:length_diss2,area6,:),2);
-            z2_diss2_areas(:,6,:) = nanmean(z_deoxy2_diss2(1:length_diss2,area6,:),2);
+            z1_diss1_areas(:,6,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area6,:),2);
+            z2_diss1_areas(:,6,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area6,:),2);
+            z1_diss2_areas(:,6,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area6,:),2);
+            z2_diss2_areas(:,6,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area6,:),2);
         end
 
         %Number of missing channels per subject, per area of interest
@@ -293,9 +273,9 @@ if areaCorr
             if dc==1
                 for sub=1:2
                     if sub==1
-                        scan=z_deoxy1_diss1;
+                        scan=deoxy3D(1).sub1;
                     else
-                        scan=z_deoxy2_diss1;
+                        scan=deoxy3D(1).sub2;
                     end
                     n_m1_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss1,area1,:))))/length_diss1;
                     n_m1_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss1,area2,:))))/length_diss1;
@@ -311,9 +291,9 @@ if areaCorr
             else
                 for sub=1:2
                     if sub==1
-                        scan=z_deoxy1_diss2;
+                        scan=deoxy3D(2).sub1;
                     else
-                        scan=z_deoxy2_diss2;
+                        scan=deoxy3D(2).sub2;
                     end
                     n_m2_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss2,area1,:))))/length_diss2;
                     n_m2_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss2,area2,:))))/length_diss2;
