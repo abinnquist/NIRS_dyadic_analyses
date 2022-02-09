@@ -17,12 +17,12 @@
 % sure to specify the location of the preprocessed NIRS data
 %% Analyses to run
 % Set to zero if you do not want to perform the task
-compile=1;      % If the data has yet to be compiled into all dyad matices
+compile=0;      % If the data has yet to be compiled into all dyad matices
 oxyOnly=1;      % 0=z_deoxy; 1=z_oxy
 chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
-areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
-FDR=0;          % False discovery rate correction
-writeXL=0;      % If you want to write the data to an excel sheet(s)
+areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
+FDR=1;          % False discovery rate correction
+writeXL=1;      % If you want to write the data to an excel sheet(s)
 image=0;        % Will prompt you in command window for mni, conversation & dyad 
 
 %% Set the Directory
@@ -126,65 +126,24 @@ end
 %% Mean Timecourse Synchrony per ROI per Dyad %%
 % Averages activiation in area specific channels then computes dyadic 
 % correlation of those areas of the brain 
-if areaCorr           
-    if numareas==4 %Right lateralization
-        area1=[2,8,12]; %medial prefrontal cortex
-        area2=[7,30:31];  %lateral prefrontal cortex
-        area3=[29,33:35]; %somatosensory cortex
-        area4=[36:40,42]; %temporoparietal junction
-    elseif numareas==5 %areas including all channels
-        area1=[1:3,5,8,10:12]; %medial prefrontal cortex
-        area2=[4,6,7,9,30:31];  %lateral prefrontal cortex
-        area3=[13,24:25,32]; %premotor cortex
-        area4=[14:16,26:29,33:35]; %%somatosensory cortex
-        area5=[17:21,23,36:40,42]; %temporoparietal junction
-    elseif numareas==6 %Sub-areas with reliable channels
-        area1=1:3; %ventral medialPFC
-        area2=11:12;  %dorsal medial PFC
-        area3=[4,7,30:31]; %ventral lateral PFC
-        area4=[14:16,33:35]; %somatosensory cortex
-        area5=[17:19,36:38]; %anterior temporoparietal junction
-        area6=[21,23,40,42]; %posterior TPJ
-    end   
+if areaCorr          
+    if numareas==4 
+        areas={[2,8,12];[7,30:31];[29,33:35];[36:40,42]}; %mPFC, lPFC, SSC, TPJ
+    elseif numareas==5
+        areas={[1:3,5,8,10:12];[4,6,7,9,30:31];[13,24:25,32];[14:16,26:29,33:35];[17:21,23,36:40,42]}; %mPFC, lPFC, PMC, SSC, TPJ
+    elseif numareas==6
+        areas={1:3;11:12;[4,7,30:31];[14:16,33:35];[17:19,36:38];[21,23,40,42]};%vmPFC, dmPFC, vlPFC, SSC, aTPJ, pTPJ
+    end  
     
     if oxyOnly
         load(strcat(preprocess_dir,filesep,'SS_compiled'),'oxy3D');
 
-        z1_diss1_areas(:,1,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area1,:),2);   
-        z1_diss1_areas(:,2,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area2,:),2); 
-        z1_diss1_areas(:,3,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area3,:),2); 
-        z1_diss1_areas(:,4,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area4,:),2); 
-
-        z2_diss1_areas(:,1,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area1,:),2); 
-        z2_diss1_areas(:,2,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area2,:),2);
-        z2_diss1_areas(:,3,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area3,:),2);
-        z2_diss1_areas(:,4,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area4,:),2);
-
-        z1_diss2_areas(:,1,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area1,:),2);  
-        z1_diss2_areas(:,2,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area2,:),2);
-        z1_diss2_areas(:,3,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area3,:),2); 
-        z1_diss2_areas(:,4,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area4,:),2);
-
-        z2_diss2_areas(:,1,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area1,:),2); 
-        z2_diss2_areas(:,2,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area2,:),2);
-        z2_diss2_areas(:,3,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area3,:),2);
-        z2_diss2_areas(:,4,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area4,:),2);
-        
-        if numareas==5
-            z1_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area5,:),2);
-        elseif numareas==6
-            z1_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area5,:),2);
-            
-            z1_diss1_areas(:,6,:) = nanmean(oxy3D(1).sub1(1:length_diss1,area6,:),2);
-            z2_diss1_areas(:,6,:) = nanmean(oxy3D(1).sub2(1:length_diss1,area6,:),2);
-            z1_diss2_areas(:,6,:) = nanmean(oxy3D(2).sub1(1:length_diss2,area6,:),2);
-            z2_diss2_areas(:,6,:) = nanmean(oxy3D(2).sub2(1:length_diss2,area6,:),2);
+        %Get the mean for each area of interest
+        for ar=1:numareas
+            z1_diss1_areas(:,ar,:) = nanmean(oxy3D(1).sub1(1:length_diss1,cell2mat(areas(ar)),:),2); 
+            z2_diss1_areas(:,ar,:) = nanmean(oxy3D(1).sub2(1:length_diss1,cell2mat(areas(ar)),:),2);
+            z1_diss2_areas(:,ar,:) = nanmean(oxy3D(2).sub1(1:length_diss2,cell2mat(areas(ar)),:),2); 
+            z2_diss2_areas(:,ar,:) = nanmean(oxy3D(2).sub2(1:length_diss2,cell2mat(areas(ar)),:),2);
         end
 
         %Number of missing channels per subject, per area of interest
@@ -196,15 +155,9 @@ if areaCorr
                     else
                         scan=oxy3D(1).sub2;
                     end
-                    n_m1_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss1,area1,:))))/length_diss1;
-                    n_m1_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss1,area2,:))))/length_diss1;
-                    n_m1_areas(:,3,sub) = sum(sum(isnan(scan(1:length_diss1,area3,:))))/length_diss1;
-                    n_m1_areas(:,4,sub) = sum(sum(isnan(scan(1:length_diss1,area4,:))))/length_diss1; 
-                    if numareas==5
-                        n_m1_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss1,area5,:))))/length_diss1; 
-                    elseif numareas==6
-                        n_m1_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss1,area5,:))))/length_diss1; 
-                        n_m1_areas(:,6,sub) = sum(sum(isnan(scan(1:length_diss1,area6,:))))/length_diss1; 
+                       %loop to count missing channels for each areas
+                    for nar=1:numareas
+                        n_m1_areas(1:numdyads,nar,sub) = sum(sum(isnan(scan(1:length_diss1,cell2mat(areas(nar)),:))))/length_diss1;
                     end
                 end
             else
@@ -214,15 +167,9 @@ if areaCorr
                     else
                         scan=oxy3D(2).sub2;
                     end
-                    n_m2_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss2,area1,:))))/length_diss2;
-                    n_m2_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss2,area2,:))))/length_diss2;
-                    n_m2_areas(:,3,sub) = sum(sum(isnan(scan(1:length_diss2,area3,:))))/length_diss2;
-                    n_m2_areas(:,4,sub) = sum(sum(isnan(scan(1:length_diss2,area4,:))))/length_diss2; 
-                    if numareas==5
-                        n_m2_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss2,area5,:))))/length_diss2; 
-                    elseif numareas==6
-                        n_m2_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss2,area5,:))))/length_diss2; 
-                        n_m2_areas(:,6,sub) = sum(sum(isnan(scan(1:length_diss2,area6,:))))/length_diss2; 
+                       %loop to count missing channels for each areas
+                    for nar=1:numareas
+                        n_m2_areas(1:numdyads,nar,sub) = sum(sum(isnan(scan(1:length_diss2,cell2mat(areas(nar)),:))))/length_diss2;
                     end
                 end
             end
@@ -231,41 +178,12 @@ if areaCorr
     else
         load(strcat(preprocess_dir,filesep,'SS_compiled'),'deoxy3D');
 
-        z1_diss1_areas(:,1,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area1,:),2);   
-        z1_diss1_areas(:,2,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area2,:),2); 
-        z1_diss1_areas(:,3,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area3,:),2); 
-        z1_diss1_areas(:,4,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area4,:),2); 
-
-        z2_diss1_areas(:,1,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area1,:),2); 
-        z2_diss1_areas(:,2,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area2,:),2);
-        z2_diss1_areas(:,3,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area3,:),2);
-        z2_diss1_areas(:,4,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area4,:),2);
-
-        z1_diss2_areas(:,1,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area1,:),2);  
-        z1_diss2_areas(:,2,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area2,:),2);
-        z1_diss2_areas(:,3,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area3,:),2); 
-        z1_diss2_areas(:,4,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area4,:),2);
-
-        z2_diss2_areas(:,1,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area1,:),2); 
-        z2_diss2_areas(:,2,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area2,:),2);
-        z2_diss2_areas(:,3,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area3,:),2);
-        z2_diss2_areas(:,4,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area4,:),2);
-        
-        if numareas==5
-            z1_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area5,:),2);
-        elseif numareas==6
-            z1_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area5,:),2);
-            z2_diss1_areas(:,5,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area5,:),2);
-            z1_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area5,:),2);
-            z2_diss2_areas(:,5,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area5,:),2);
-            
-            z1_diss1_areas(:,6,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,area6,:),2);
-            z2_diss1_areas(:,6,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,area6,:),2);
-            z1_diss2_areas(:,6,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,area6,:),2);
-            z2_diss2_areas(:,6,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,area6,:),2);
+                %Get the mean for each area of interest
+        for ar=1:numareas
+            z1_diss1_areas(:,ar,:) = nanmean(deoxy3D(1).sub1(1:length_diss1,cell2mat(areas(ar)),:),2); 
+            z2_diss1_areas(:,ar,:) = nanmean(deoxy3D(1).sub2(1:length_diss1,cell2mat(areas(ar)),:),2);
+            z1_diss2_areas(:,ar,:) = nanmean(deoxy3D(2).sub1(1:length_diss2,cell2mat(areas(ar)),:),2); 
+            z2_diss2_areas(:,ar,:) = nanmean(deoxy3D(2).sub2(1:length_diss2,cell2mat(areas(ar)),:),2);
         end
 
         %Number of missing channels per subject, per area of interest
@@ -277,15 +195,9 @@ if areaCorr
                     else
                         scan=deoxy3D(1).sub2;
                     end
-                    n_m1_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss1,area1,:))))/length_diss1;
-                    n_m1_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss1,area2,:))))/length_diss1;
-                    n_m1_areas(:,3,sub) = sum(sum(isnan(scan(1:length_diss1,area3,:))))/length_diss1;
-                    n_m1_areas(:,4,sub) = sum(sum(isnan(scan(1:length_diss1,area4,:))))/length_diss1; 
-                    if numareas==5
-                        n_m1_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss1,area5,:))))/length_diss1; 
-                    elseif numareas==6
-                        n_m1_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss1,area5,:))))/length_diss1; 
-                        n_m1_areas(:,6,sub) = sum(sum(isnan(scan(1:length_diss1,area6,:))))/length_diss1; 
+                    
+                    for nar=1:numareas
+                        n_m1_areas(1:numdyads,nar,sub) = sum(sum(isnan(scan(1:length_diss1,cell2mat(areas(nar)),:))))/length_diss1;
                     end
                 end
             else
@@ -295,15 +207,9 @@ if areaCorr
                     else
                         scan=deoxy3D(2).sub2;
                     end
-                    n_m2_areas(:,1,sub) = sum(sum(isnan(scan(1:length_diss2,area1,:))))/length_diss2;
-                    n_m2_areas(:,2,sub) = sum(sum(isnan(scan(1:length_diss2,area2,:))))/length_diss2;
-                    n_m2_areas(:,3,sub) = sum(sum(isnan(scan(1:length_diss2,area3,:))))/length_diss2;
-                    n_m2_areas(:,4,sub) = sum(sum(isnan(scan(1:length_diss2,area4,:))))/length_diss2; 
-                    if numareas==5
-                        n_m2_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss2,area5,:))))/length_diss2; 
-                    elseif numareas==6
-                        n_m2_areas(:,5,sub) = sum(sum(isnan(scan(1:length_diss2,area5,:))))/length_diss2; 
-                        n_m2_areas(:,6,sub) = sum(sum(isnan(scan(1:length_diss2,area6,:))))/length_diss2; 
+                       %loop to count missing channels for each areas
+                    for nar=1:numareas
+                        n_m2_areas(1:numdyads,nar,sub) = sum(sum(isnan(scan(1:length_diss2,cell2mat(areas(nar)),:))))/length_diss2;
                     end
                 end
             end
@@ -412,7 +318,7 @@ if areaCorr
             aName='OG_';
         else
             areas=["Dyads","vmPFC","dmPFC","vlPFC","sms","atpj","pTPJ"];
-            aName='VD_';
+            aName='SA_';
         end
         
         Sig_r_D1=array2table([dyads,Sig_r_d1(:,:,1)],'VariableNames',areas);
