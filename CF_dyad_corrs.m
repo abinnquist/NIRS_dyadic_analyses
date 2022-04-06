@@ -17,11 +17,11 @@
 % Set to zero if you do not want to perform the task
 compile=0;      % If the data has yet to be compiled after preprocessing 
 oxyOnly=1;      % 0=z_deoxy; 1=z_oxy;
-chCorr=0;       % Dyadic channel correlations over entire conversation (same channels only)
-areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
+chCorr=1;       % Dyadic channel correlations over entire conversation (same channels only)
+areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
 FDR=1;          % False discovery rate correction
 writeXL=1;      % Write the data to an excel sheet(s) in the preprocess_dir
-image=0;        % Will prompt you in command window for mni, conversation & dyad 
+image=1;        % Will prompt you in command window for mni, conversation & dyad 
 
 %% Load directory & varibles to use
 % You can set the directory w/ line 3 or use the get directory in line 4
@@ -47,7 +47,7 @@ if compile
     [deoxy3D,oxy3D]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
 
     %Save a .mat file to the preprocessing directory 
-    save(strcat(preprocess_dir,filesep,'Conflict_compiled'),'deoxy3D','oxy3D');
+    save(strcat(preprocess_dir,filesep,'compiled_data'),'deoxy3D','oxy3D');
 
     clearvars -except preprocess_dir numdyads numchans numareas length_scan oxyOnly chCorr areaCorr cutoff FDR writeXL image
 end
@@ -55,7 +55,7 @@ end
 %% Dyadic channel correlations 
 if chCorr    
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'oxy3D');
+        load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'oxy3D');
         
         for dyad=1:numdyads
             for channel=1:numchans
@@ -69,7 +69,7 @@ if chCorr
             end
         end
     else
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'deoxy3D');
+        load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'deoxy3D');
         
         for dyad=1:numdyads
             for channel=1:numchans
@@ -115,7 +115,7 @@ if areaCorr
     end  
    
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'CF_compiled.mat'),'oxy3D')
+        load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'oxy3D')
         
         %Get the mean for each area of interest
         for ar=1:numareas
@@ -185,7 +185,7 @@ if areaCorr
         end
         nmask=logical(nmask);  
     else
-        load(strcat(preprocess_dir,filesep,'Conflict_compiled.mat'),'deoxy3D')
+        load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'deoxy3D')
         
         %Get the mean for each area of interest
         for ar=1:numareas
