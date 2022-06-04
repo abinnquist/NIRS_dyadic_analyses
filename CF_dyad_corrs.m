@@ -1,6 +1,7 @@
 %% Instructions %%
-% Dependencies for analyses: fdr_bky.m 
-% Dependencies for aimaging: spm12, xjview, and mni_coordinates (in folder)
+% Run from the main folder 'NIRS_dyadic_analysis'
+% Dependencies for analyses located in helperFuncs
+% Dependencies for imaging: spm12, xjview, and mni_coordinates (in folder)
 %
 % Data must be preprocessed before using this script (see
 % https://github.com/abinnquist/fNIRSpreProcessing)
@@ -18,15 +19,16 @@
 compile=0;      % If the data has yet to be compiled after preprocessing 
 oxyOnly=1;      % 0=z_deoxy; 1=z_oxy;
 chCorr=1;       % Dyadic channel correlations over entire conversation (same channels only)
-areaCorr=0;     % Dyadic correlation over entire conversation per area of the brain
+areaCorr=1;     % Dyadic correlation over entire conversation per area of the brain
 FDR=1;          % False discovery rate correction
 writeXL=1;      % Write the data to an excel sheet(s) in the preprocess_dir
-image=1;        % Will prompt you in command window for mni, conversation & dyad 
+image=0;        % Will prompt you in command window for mni, conversation & dyad 
 
 %% Load directory & varibles to use
 % You can set the directory w/ line 3 or use the get directory in line 4
 %preprocess_dir= ''; %Specify path instead of selecting each run
 preprocess_dir=uigetdir('','Choose Data Directory');
+addpath(genpath('helperFuncs'))
 
 %% Properties
 % These can be changed based on the study and what FDR cutoff is prefered
@@ -44,7 +46,7 @@ numareas=5;  % 3=all ch's mPFC, lPFC & TPJ, 5=subsets, 6=Lateralization
 % discussion (affiliation and conflict), and subject (a and b), (2x2x2=8).
 if compile
     numScans=2;
-    [deoxy3D,oxy3D]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
+    [deoxy3D,oxy3D]= compiledyadicNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans)
 
     %Save a .mat file to the preprocessing directory 
     save(strcat(preprocess_dir,filesep,'compiled_data'),'deoxy3D','oxy3D');
@@ -56,31 +58,51 @@ end
 if chCorr    
     if oxyOnly
         load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'oxy3D');
+        r_values_affil=nan(numchans,numchans,numdyads);
+        r_values_con=nan(numchans,numchans,numdyads);
+        p_values_affil=nan(numchans,numchans,numdyads);
+        p_values_con=nan(numchans,numchans,numdyads);
         
         for dyad=1:numdyads
-            for channel=1:numchans
-                a = oxy3D(1).sub1(1:length_scan,channel,dyad);
-                b = oxy3D(1).sub2(1:length_scan,channel,dyad);
-                [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
-
-                c = oxy3D(2).sub1(1:length_scan,channel,dyad);
-                d = oxy3D(2).sub2(1:length_scan,channel,dyad);
-                [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
+            for chan1=1:numchans
+                for chan2=1:numchans
+                    a = oxy3D(1).sub1(1:length_scan,chan1,dyad);
+                    b = oxy3D(1).sub2(1:length_scan,chan2,dyad);
+                    [r_values_affil(chan1,chan2,dyad),p_values_affil(chan1,chan2,dyad)] = corr(a,b);
+    
+                    c = oxy3D(2).sub1(1:length_scan,chan1,dyad);
+                    d = oxy3D(2).sub2(1:length_scan,chan2,dyad);
+                    [r_values_con(chan1,chan2,dyad),p_values_con(chan1,chan2,dyad)] = corr(c,d);
+                end
             end
         end
     else
         load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'deoxy3D');
+        r_values_affil=nan(numchans,numchans,numdyads);
+        r_values_con=nan(numchans,numchans,numdyads);
+        p_values_affil=nan(numchans,numchans,numdyads);
+        p_values_con=nan(numchans,numchans,numdyads);
         
         for dyad=1:numdyads
-            for channel=1:numchans
-                a = deoxy3D(1).sub1(1:length_scan,channel,dyad);
-                b = deoxy3D(1).sub2(1:length_scan,channel,dyad);
-                [r_values_affil(dyad,channel),p_values_affil(dyad,channel)] = corr(a,b);
-
-                c = deoxy3D(2).sub1(1:length_scan,channel,dyad);
-                d = deoxy3D(2).sub2(1:length_scan,channel,dyad);
-                [r_values_con(dyad,channel),p_values_con(dyad,channel)] = corr(c,d);
+            for chan1=1:numchans
+                for chan2=1:numchans
+                    a = deoxy3D(1).sub1(1:length_scan,chan1,dyad);
+                    b = deoxy3D(1).sub2(1:length_scan,chan2,dyad);
+                    [r_values_affil(chan1,chan2,dyad),p_values_affil(chan1,chan2,dyad)] = corr(a,b);
+    
+                    c = deoxy3D(2).sub1(1:length_scan,chan1,dyad);
+                    d = deoxy3D(2).sub2(1:length_scan,chan2,dyad);
+                    [r_values_con(chan1,chan2,dyad),p_values_con(chan1,chan2,dyad)] = corr(c,d);
+                end
             end
+        end
+    end
+
+    %for paired channels corrs only
+    for dy=1:numdyads
+        for ch=1:numchans
+            r_paired_affil(ch,dy)=r_values_affil(ch,ch,dy);
+            r_paired_con(ch,dy)=r_values_con(ch,ch,dy);
         end
     end
     
@@ -95,10 +117,10 @@ if chCorr
             r_mask_con(~mask_con(:,ch),ch)=NaN;
         end
         save(strcat(preprocess_dir,filesep,'CF_FDR_chCorrs'),'r_mask_affil','r_mask_con','r_values_affil','r_values_con',...
-        'p_values_affil','p_values_con','mask_con','mask_affil')
+        'p_values_affil','p_values_con','mask_con','mask_affil','r_paired_affil','r_paired_con')
     else
         save(strcat(preprocess_dir,filesep,'CF_rVals_dyadChs'),'r_values_affil','r_values_con',...
-        'p_values_affil','p_values_con')
+        'p_values_affil','p_values_con','r_paired_affil','r_paired_con')
     end
     
     clearvars -except preprocess_dir numdyads numchans numareas length_scan oxyOnly areaCorr cutoff FDR writeXL image
@@ -116,159 +138,76 @@ if areaCorr
    
     if oxyOnly
         load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'oxy3D')
-        
-        %Get the mean for each area of interest
+
+        %Get the mean for each area of interest, for every timepoint
         for ar=1:numareas
+            z_aff1_areas(:,ar,:) = nanmean(oxy3D(1).sub1(1:length_scan,cell2mat(areas(ar)),:),2); 
+            z_aff2_areas(:,ar,:) = nanmean(oxy3D(1).sub2(1:length_scan,cell2mat(areas(ar)),:),2); 
             z_con1_areas(:,ar,:) = nanmean(oxy3D(2).sub1(1:length_scan,cell2mat(areas(ar)),:),2); 
             z_con2_areas(:,ar,:) = nanmean(oxy3D(2).sub2(1:length_scan,cell2mat(areas(ar)),:),2); 
         end
 
-        %Number of missing channels per subject
-        for sub=1:2
-            if sub==1
-                scan=oxy3D(2).sub1;
-            else
-                scan=oxy3D(2).sub2;
-            end
-               %loop to count missing channels for each areas
-            for nar=1:numareas
-                n_con_areas(1:numdyads,nar,sub) = sum(sum(isnan(scan(1:length_scan,cell2mat(areas(nar)),:))))/length_scan;
-            end
-        end
-            
-        for dyad=1:numdyads
-            for area=1:numareas
-                if numareas==3
-                    if area==2 || area==3
-                        if n_con_areas(dyad,area,1)>2 || n_con_areas(dyad,area,2)>2
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end                
-                    else
-                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end
-                    end
-                elseif numareas==5
-                    if area==1 || area==2
-                        if n_con_areas(dyad,area,1)>=1 || n_con_areas(dyad,area,2)>=1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end                
-                    else
-                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end
-                    end
-                elseif numareas==6
-                    if area==1 || area==5
-                        if n_con_areas(dyad,area,1)>=1 || n_con_areas(dyad,area,2)>=1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end                
-                    else
-                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end
-                    end
+        %Get missing channels per area of interest
+        for convo=1:2
+            for dy=1:numdyads
+                for ar=1:numareas
+                    missN_s1(dy,ar,convo) = numel(find(isnan(oxy3D(convo).sub1(1,cell2mat(areas(ar)),dy)))); 
+                    missN_s2(dy,ar,convo) = numel(find(isnan(oxy3D(convo).sub2(1,cell2mat(areas(ar)),dy)))); 
                 end
             end
         end
+        nmask = cfMissingch(missN_s1,missN_s2,numdyads,numareas);
         nmask=logical(nmask);  
+
     else
         load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'deoxy3D')
         
         %Get the mean for each area of interest
         for ar=1:numareas
+            z_aff1_areas(:,ar,:) = nanmean(deoxy3D(1).sub1(1:length_scan,cell2mat(areas(ar)),:),2); 
+            z_aff2_areas(:,ar,:) = nanmean(deoxy3D(1).sub2(1:length_scan,cell2mat(areas(ar)),:),2); 
             z_con1_areas(:,ar,:) = nanmean(deoxy3D(2).sub1(1:length_scan,cell2mat(areas(ar)),:),2); 
             z_con2_areas(:,ar,:) = nanmean(deoxy3D(2).sub2(1:length_scan,cell2mat(areas(ar)),:),2); 
         end
 
         %Number of missing channels per subject
-        for sub=1:2
-            if sub==1
-                scan=deoxy3D(2).sub1;
-            else
-                scan=deoxy3D(2).sub2;
-            end
-               %loop to count missing channels for each areas
-            for nar=1:numareas
-                n_con_areas(1:numdyads,nar,sub) = sum(sum(isnan(scan(1:length_scan,cell2mat(areas(nar)),:))))/length_scan;
-            end
-        end
-            
-        for dyad=1:numdyads
-            for area=1:numareas
-                if numareas==3
-                    if area==2 || area==3
-                        if n_con_areas(dyad,area,1)>2 || n_con_areas(dyad,area,2)>2
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end                
-                    else
-                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end
-                    end
-                elseif numareas==5
-                    if area==1 || area==2
-                        if n_con_areas(dyad,area,1)>=1 || n_con_areas(dyad,area,2)>=1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end                
-                    else
-                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end
-                    end
-                elseif numareas==6
-                    if area==1 || area==5
-                        if n_con_areas(dyad,area,1)>=1 || n_con_areas(dyad,area,2)>=1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end                
-                    else
-                        if n_con_areas(dyad,area,1)>1 || n_con_areas(dyad,area,2)>1
-                            nmask(dyad,area)=1;
-                        else
-                            nmask(dyad,area)=0;
-                        end
-                    end
+        for convo=1:2
+            for dy=1:numdyads
+                for ar=1:numareas
+                    missN_s1(dy,ar,convo) = numel(find(isnan(deoxy3D(convo).sub1(1,cell2mat(areas(ar)),dy)))); 
+                    missN_s2(dy,ar,convo) = numel(find(isnan(deoxy3D(convo).sub2(1,cell2mat(areas(ar)),dy)))); 
                 end
             end
         end
-        nmask=logical(nmask); 
+        nmask = cfMissingch(missN_s1,missN_s2,numdyads,numareas);
+        nmask=logical(nmask);   
     end
      
-    % Correlation per Conversation per ROI per Dyad 
+    % Correlation of ROI x dyad x convo
     for area=1:numareas
         for dyad=1:numdyads
-            a = z_con1_areas(:,area,dyad);
-            b = z_con2_areas(:,area,dyad);
-            [r_con_areas(dyad,area),p_con_areas(dyad,area)] = corr(a,b);
+            a = z_aff1_areas(:,area,dyad);
+            b = z_aff2_areas(:,area,dyad);
+            [r_aff_areas(dyad,area),p_aff_areas(dyad,area)] = corr(a,b);
+
+            c = z_con1_areas(:,area,dyad);
+            d = z_con2_areas(:,area,dyad);
+            [r_con_areas(dyad,area),p_con_areas(dyad,area)] = corr(c,d);
         end    
     end
 
+    [mask_aff, ~]=fdr_bky(p_aff_areas,cutoff,'yes'); %Creates a mask for sig. areas
     [mask_con, ~]=fdr_bky(p_con_areas,cutoff,'yes'); %Creates a mask for sig. areas
 
+    Sig_r_affiliation=r_aff_areas;
+    Sig_r_affiliation(nmask(:,:,1))=NaN;
+    Sig_r_aff=Sig_r_affiliation;
+    Sig_r_aff(~mask_aff)=NaN;
+    Sig_r_affiliation(:,:,2)=Sig_r_aff;
+    Sig_r_affiliation(:,:,3)=r_aff_areas;
+
     Sig_r_conflict=r_con_areas;
-    Sig_r_conflict(nmask)=NaN;
+    Sig_r_conflict(nmask(:,:,2))=NaN;
     Sig_r_con=Sig_r_conflict;
     Sig_r_con(~mask_con)=NaN;
     Sig_r_conflict(:,:,2)=Sig_r_con;
@@ -295,6 +234,10 @@ if areaCorr
             aName='Lat_';
         end
         
+        Sig_r_aff1=array2table([dyads,Sig_r_affiliation(:,:,1)],'VariableNames',areas);
+        Sig_r_aff2=array2table([dyads,Sig_r_affiliation(:,:,2)],'VariableNames',areas);
+        r_values_aff=array2table([dyads,Sig_r_affiliation(:,:,3)],'VariableNames',areas);
+
         Sig_r_con1=array2table([dyads,Sig_r_conflict(:,:,1)],'VariableNames',areas);
         Sig_r_con2=array2table([dyads,Sig_r_conflict(:,:,2)],'VariableNames',areas);
         r_values_con=array2table([dyads,Sig_r_conflict(:,:,3)],'VariableNames',areas);
@@ -305,7 +248,7 @@ if areaCorr
         writetable(Sig_r_con1,xlName,'sheet','r_vals_lostchs')  %r-vals lost chans masked
         writetable(Sig_r_con2,xlName,'sheet','r_vals_mask') %r-vals FDR & mask
     end
-    save(strcat(preprocess_dir,filesep,aName,typeOxy,'CF_areas'),'Sig_r_conflict')
+    save(strcat(preprocess_dir,filesep,aName,typeOxy,'CF_areas'),'Sig_r_conflict','Sig_r_affiliation')
     clearvars -except preprocess_dir numchans numdyads image
 end
 
