@@ -50,7 +50,7 @@ if compile
     [deoxy3D,oxy3D]= compiledyadicNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans,zdim);
 
     %Save a .mat file to the preprocessing directory 
-    save(strcat(preprocess_dir,filesep,'SS_compiled'),'deoxy3D','oxy3D');
+    save(strcat(preprocess_dir,filesep,'compiled_data'),'deoxy3D','oxy3D');
     
     clearvars -except preprocess_dir numdyads numchans numareas length_diss1 length_diss2 oxyOnly chCorr areaCorr cutoff FDR writeXL
 end
@@ -59,7 +59,7 @@ end
 % Computes all channel correlations for each dyad and conversation. 
 if chCorr
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'oxy3D');
+        load(strcat(preprocess_dir,filesep,'compiled_data'),'oxy3D');
         r_values_diss1=nan(numchans,numchans,numdyads);
         r_values_diss2=nan(numchans,numchans,numdyads);
         p_values_diss1=nan(numchans,numchans,numdyads);
@@ -79,7 +79,7 @@ if chCorr
             end
         end
     else
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'deoxy3D');
+        load(strcat(preprocess_dir,filesep,'compiled_data'),'deoxy3D');
         r_values_diss1=nan(numchans,numchans,numdyads);
         r_values_diss2=nan(numchans,numchans,numdyads);
         p_values_diss1=nan(numchans,numchans,numdyads);
@@ -150,7 +150,7 @@ if areaCorr
     end  
     
     if oxyOnly
-        load(strcat(preprocess_dir,filesep,'SS_compiled'),'oxy3D');
+        load(strcat(preprocess_dir,filesep,'compiled_data'),'oxy3D');
 
         [z1_diss1_areas,z1_diss2_areas,z2_diss1_areas,z2_diss2_areas,missN_s1,missN_s2]=areaMeans(oxy3D,...
             length_diss1,length_diss2,numdyads,numareas,montageMatch,areas1,areas2,areas3); %Adjusted area means by cap placement
