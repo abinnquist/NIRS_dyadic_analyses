@@ -2,30 +2,45 @@
 %PHASE SYNCHRONY 
 %----------------
 %instantaneous phase synchrony for all possible channel pairs - code from: Pedersen et al., 2017
-samprate = 3.9063; %change this to whatever sampling rate you had 
-length_diss=1810; % Shortest conversation for both discussions
+currdir=cd;
+codedir='C:\Users\Mike\Documents\MATLAB\';
+%% Analysis to run
+compile=0;
 
 %% Choose either to compile data or load if already compiled
 preprocess_dir=uigetdir('','Choose Data Directory');
+addpath(genpath(strcat(currdir,filesep,'dependencies')))
+addpath(genpath(strcat(codedir,'nirs-toolbox-master')))
+
 dataprefix='SS';
 ch_reject=3;
 numScans=5;
-[deoxy3D,oxy3D]= compileNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans);
+zdim=1;
+samprate = 3.9063; %change this to whatever sampling rate you had 
+length_diss=1810; % Shortest conversation for both discussions
 
-%depends on nirs toolbox
-% load(strcat(preprocess_dir,filesep,'compiled_data'));
-[~, numchannels, numdyads] = size(oxy3D(1).sub1);
+%% Load in the correct data 
+if compile
+    [deoxy3D,oxy3D]= compiledyadicNIRSdata(preprocess_dir,dataprefix,ch_reject,numScans,zdim);
+
+    %Save a .mat file to the preprocessing directory 
+    save(strcat(preprocess_dir,filesep,'compiled_data'),'deoxy3D','oxy3D');
+else
+    load(strcat(preprocess_dir,filesep,'compiled_data'));
+end
+
 %% Run Phase synchrony 
 %need a narrow frequency band for phase synchrony to work
-dyads_phasesynch_fast1 = nan(numchannels*2,numchannels*2,numdyads); %slow-4 freq band
-dyads_phasesynch_slow1 = nan(numchannels*2,numchannels*2,numdyads); %slow-5 freq band
+[~, numchans, numdyads] = size(oxy3D(1).sub1);
+dyads_phasesynch_fast1 = nan(numchans*2,numchans*2,numdyads); %slow-4 freq band
+dyads_phasesynch_slow1 = nan(numchans*2,numchans*2,numdyads); %slow-5 freq band
 
-dyads_phasesynch_fast2 = nan(numchannels*2,numchannels*2,numdyads); %slow-4 freq band
-dyads_phasesynch_slow2 = nan(numchannels*2,numchannels*2,numdyads); %slow-5 freq band
+dyads_phasesynch_fast2 = nan(numchans*2,numchans*2,numdyads); %slow-4 freq band
+dyads_phasesynch_slow2 = nan(numchans*2,numchans*2,numdyads); %slow-5 freq band
 
 num_good_channels = nan(1,numdyads);
 
-for d=1:2
+for d=1:2 % number of convos
     for a=1:numdyads
         subj1 = oxy3D(d).sub1(1:length_diss,:,a);
         subj2 = oxy3D(d).sub2(1:length_diss,:,a);
@@ -112,7 +127,7 @@ end
 
 %phase synch null dist: pairing random subjects who weren't in same dyad together.
 iterations = 100; %number of bootstrapped null samples to take; small number here for speedier demo but should be 100+
-newchans=numchannels*2;
+newchans=numchans*2;
 nulldist_fast = nan(newchans,newchans,iterations);
 nulldist_slow = nan(newchans,newchans,iterations);
 
@@ -204,8 +219,8 @@ end
 Elapsedtime = toc(Elapsedtime);
 fprintf('\n\t Elapsed time: %g seconds ...\n', Elapsedtime);
 
-nulldist_fast_inter = nulldist_fast(1:numchannels,numchannels+1:end,:);
-nulldist_slow_inter = nulldist_slow(1:numchannels,numchannels+1:end,:);
+nulldist_fast_inter = nulldist_fast(1:numchans,numchans+1:end,:);
+nulldist_slow_inter = nulldist_slow(1:numchans,numchans+1:end,:);
 nulldist_fast_inter = nulldist_fast_inter(~isnan(nulldist_fast_inter));%makes a single vector of inter connections, ignores channel label
 nulldist_slow_inter = nulldist_slow_inter(~isnan(nulldist_slow_inter));
 fisherz = @(r)(log(1+r)-log(1-r))/2;
@@ -218,16 +233,16 @@ slength_slow = length(slst_slow);
 phasecutoff_fast = slst_fast(end-round(slength_fast*5/100));
 phasecutoff_slow = slst_slow(end-round(slength_slow*5/100));
     %For both Convos
-dyad_fast_z1 = arrayfun(fisherz, dyads_phasesynch_fast1(1:numchannels,numchannels+1:end,:));
-dyad_slow_z1 = arrayfun(fisherz, dyads_phasesynch_slow1(1:numchannels,numchannels+1:end,:));
-dyad_fast_z2 = arrayfun(fisherz, dyads_phasesynch_fast2(1:numchannels,numchannels+1:end,:));
-dyad_slow_z2 = arrayfun(fisherz, dyads_phasesynch_slow2(1:numchannels,numchannels+1:end,:));
+dyad_fast_z1 = arrayfun(fisherz, dyads_phasesynch_fast1(1:numchans,numchans+1:end,:));
+dyad_slow_z1 = arrayfun(fisherz, dyads_phasesynch_slow1(1:numchans,numchans+1:end,:));
+dyad_fast_z2 = arrayfun(fisherz, dyads_phasesynch_fast2(1:numchans,numchans+1:end,:));
+dyad_slow_z2 = arrayfun(fisherz, dyads_phasesynch_slow2(1:numchans,numchans+1:end,:));
 
 %network estimation based on similarity matrices and null dist made above
-binarynetwork_fast1 = zeros(numchannels,numchannels,numdyads);
-binarynetwork_slow1 = zeros(numchannels,numchannels,numdyads);
-binarynetwork_fast2 = zeros(numchannels,numchannels,numdyads);
-binarynetwork_slow2 = zeros(numchannels,numchannels,numdyads);
+binarynetwork_fast1 = zeros(numchans,numchans,numdyads);
+binarynetwork_slow1 = zeros(numchans,numchans,numdyads);
+binarynetwork_fast2 = zeros(numchans,numchans,numdyads);
+binarynetwork_slow2 = zeros(numchans,numchans,numdyads);
 for z=1:numdyads
 binarynetwork_fast1(:,:,z) = dyad_fast_z1(:,:,z)>phasecutoff_fast;
 binarynetwork_slow1(:,:,z) = dyad_slow_z1(:,:,z)>phasecutoff_slow;
@@ -237,12 +252,12 @@ binarynetwork_slow2(:,:,z) = dyad_slow_z2(:,:,z)>phasecutoff_slow;
 end
 
 %Find p-values of all channel pairings compared to the null dist
-pvals_fast1 = ones(numchannels,numchannels);
-pvals_slow1 = ones(numchannels,numchannels);
-pvals_fast2 = ones(numchannels,numchannels);
-pvals_slow2 = ones(numchannels,numchannels);
-for x=1:numchannels
-    for y=1:numchannels
+pvals_fast1 = ones(numchans,numchans);
+pvals_slow1 = ones(numchans,numchans);
+pvals_fast2 = ones(numchans,numchans);
+pvals_slow2 = ones(numchans,numchans);
+for x=1:numchans
+    for y=1:numchans
         fastval1 = nanmean(dyad_fast_z1(x,y,:));
         slowval1 = nanmean(dyad_slow_z1(x,y,:));
         fastval2 = nanmean(dyad_fast_z2(x,y,:));
