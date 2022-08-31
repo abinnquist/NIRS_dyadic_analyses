@@ -38,7 +38,7 @@ length_diss1=1853; % Can be changed to the shortest conversation
 length_diss2=1810; % Can be changed to the shortest conversation
 numdyads=52; % Number of dyads
 numchans=42; % Number of channels
-numareas=4; % 4=mPFC, lPFC, TPJ, VIS; 5=mPFC, lPFC, PMC, SMS & TPJ; 6=vmPFC, dmPFC, vlPFC, SMS, TPJ
+numareas=5; % 4=mPFC, lPFC, TPJ, VIS; 5=mPFC, lPFC, SMS, TPJ & VIS; 6=vmPFC, dmPFC, vlPFC, SMS, TPJ
 zdim=1; % 0=compile non-zscored; 1=compile z-scored
 
 %% Compile subject data %%
@@ -65,7 +65,14 @@ if chCorr
         p_values_diss1=nan(numchans,numchans,numdyads);
         p_values_diss2=nan(numchans,numchans,numdyads);
         
+        fprintf('\n\t Preprocessing ...\n')
+        reverseStr = '';
+        Elapsedtime = tic;
         for dyad=1:numdyads
+            msg = sprintf('\n\t group %d/%d ...',dyad,numdyads);
+            fprintf([reverseStr,msg]);
+            reverseStr = repmat(sprintf('\b'),1,length(msg)); 
+
             for chan1=1:numchans
                 for chan2=1:numchans
                     a = oxy3D(1).sub1(1:length_diss1,chan1,dyad);
@@ -78,6 +85,8 @@ if chCorr
                 end
             end
         end
+        Elapsedtime = toc(Elapsedtime);
+        fprintf('\n\t Elapsed time: %g seconds\n', Elapsedtime);
     else
         load(strcat(preprocess_dir,filesep,'compiled_data'),'deoxy3D');
         r_values_diss1=nan(numchans,numchans,numdyads);
@@ -122,7 +131,6 @@ if chCorr
             end
         end
 
-        save(strcat(preprocess_dir,filesep,'FDR_r_mask'),'FDR_r_mask')
         save(strcat(preprocess_dir,filesep,'SS_FDR_chCorrs'),'r_values_diss1','r_values_diss2',...
         'p_values_diss1','p_values_diss2','r_mask_diss1','r_mask_diss2', 'r_paired_diss1','r_paired_diss2')
     else
@@ -134,20 +142,20 @@ if chCorr
 end
 
 %% Mean Timecourse Synchrony per ROI per Dyad %%
-% Averages activiation in area specific channels then computes dyadic 
+% Average activiation in area specific channels, then computes dyadic 
 % correlation of those areas of the brain 
 if areaCorr    
     montageMatch=readtable(strcat(preprocess_dir,filesep,'montageMatch.csv'));
 
     if numareas==4 
-        areas1={[1:3,5,8,10:12];[4,6:7,9,30:31];[17:21,23,36:40,42];[22,41]}; %mPFC, lPFC, SSC, TPJ
-        areas2={[1:3,5,8,10];[4,6:7,9,30:31];[16,17:21,35:40];41:42}; %mPFC, lPFC, TPJ, VIS
-        areas3={[1:3,5,8];[4,7,30:31];[14:18,33:37];[21:23,40:42]}; %mPFC, lPFC, TPJ,VIS
+        areas1={[1:3,5,8,10:12];[4,6:7,9,30:31];[17:21,23,36:40,42];[22,41]}; %mPFC, lPFC, TPJ, VIS
+        areas2={[1:3,5,8,10];[4,6:7,9,30:31];[16:21,35:40];41:42}; %mPFC, lPFC, TPJ, VIS
+        areas3={[1:3,5,8];[4,7,30:31];[14:18,33:37];[21:23,40:42]}; %mPFC, lPFC, TPJ, VIS
     elseif numareas==5
-        areas={[1:3,5,8,10:12];[4,6,7,9,30:31];[13,24:25,32];[14:16,26:29,33:35];[17:21,23,36:40,42]}; %mPFC, lPFC, PMC, SSC, TPJ
-    elseif numareas==6
-        areas={1:3;11:12;[4,7,30:31];[14:16,33:35];[17:19,36:38];[21,23,40,42]};%vmPFC, dmPFC, vlPFC, SSC, aTPJ, pTPJ
-    end  
+        areas1={[1:3,5,8,10:12];[4,6:7,9,30:31];[14:16,26:29,33:35];[17:21,23,36:40,42];[22,41]}; %mPFC, lPFC, SSC, TPJ, VIS
+        areas2={[1:3,5,8,10];[4,6:7,9,30:31];[13:14,24:25,32:34];[16:21,27,29,35:40];41:42}; %mPFC, lPFC, SSC, TPJ, VIS
+        areas3={[1:3,5,8];[4,7,30:31];[13,24:25,32];[14:18,33:37];[21:23,40:42]}; %mPFC, lPFC, SSC, TPJ, VIS
+    end
     
     if oxyOnly
         load(strcat(preprocess_dir,filesep,'compiled_data'),'oxy3D');
@@ -158,7 +166,20 @@ if areaCorr
         %Creates a mask for missing channels for both subjects within each dyad
         [nmask1,nmask2]=maskmissing(montageMatch,missN_s1,missN_s2,numdyads,numareas);
         nmask=nmask1+nmask2;
-        nmask=nmask-1;
+        nmask(nmask(:,:,:)==1)=0;
+        nmask(nmask(:,:,:)==2)=1;
+        nmask=logical(nmask);
+    else
+        load(strcat(preprocess_dir,filesep,'compiled_data.mat'),'deoxy3D')
+        
+        [z1_diss1_areas,z1_diss2_areas,z2_diss1_areas,z2_diss2_areas,missN_s1,missN_s2]=areaMeans(deoxy3D,...
+            length_diss1,length_diss2,numdyads,numareas,montageMatch,areas1,areas2,areas3); %Adjusted area means by cap placement
+
+        %Creates a mask for missing channels for both subjects within each dyad
+        [nmask1,nmask2]=maskmissing(montageMatch,missN_s1,missN_s2,numdyads,numareas);
+        nmask=nmask1+nmask2;
+        nmask(nmask(:,:,:)==1)=0;
+        nmask(nmask(:,:,:)==2)=1;
         nmask=logical(nmask);
     end
     
@@ -211,7 +232,7 @@ if areaCorr
             areas=["Dyads","mPFC","lPFC","TPJ","VIS"];
             aName='Adj_';
         elseif numareas==5
-            areas=["Dyads","mPFC","lPFC","pmc","sms","tpj"];
+            areas=["Dyads","mPFC","lPFC","SMS","TPJ","VIS"];
             aName='OG_';
         else
             areas=["Dyads","vmPFC","dmPFC","vlPFC","sms","atpj","pTPJ"];
@@ -246,4 +267,4 @@ if areaCorr
     end
     save(strcat(preprocess_dir,filesep,aName,typeOxy,'SS_areas'),'Sig_r_d1','Sig_r_d2')
 end
-    clearvars -except preprocess_dir numchans numdyads
+clearvars -except preprocess_dir numchans numdyads
