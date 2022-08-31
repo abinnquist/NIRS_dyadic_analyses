@@ -1,92 +1,39 @@
-function [nmask1,nmask2]=maskmissing(montageMatch,missN_s1,missN_s2,numdyads,numareas)
+function [nmask1,nmask2]=maskmissing(montageMatch,missN_s1,missN_s2,numdyads,numareas,areas1,areas2)
+loss=0.2;
 nmask1=ones(numdyads,numareas,2);
 nmask2=ones(numdyads,numareas,2);
-for convo=1:2
-    for dyad=1:numdyads 
-        if montageMatch.Montage1(dyad)==1 
-            if missN_s1(dyad,1,convo) > 2
-                nmask1(dyad,1,convo)=0;
+
+for c=1:2
+    for dy=1:numdyads
+        for a=1:numareas
+            if montageMatch.Montage1(dy)==1 
+                nChan=length(areas1{a,1});
+                cutoff=round(nChan*loss);
+                if missN_s1(dy,a,c) > cutoff
+                    nmask1(dy,a,c)=0;
+                end
+            elseif montageMatch.Montage1(dy)==2
+                nChan=length(areas2{a,1});
+                cutoff=round(nChan*loss);
+                if missN_s1(dy,a,c) > cutoff
+                    nmask1(dy,a,c)=0;
+                end
             end
-            if missN_s1(dyad,2,convo) > 1
-                nmask1(dyad,2,convo)=0;
-            end
-            if missN_s1(dyad,3,convo) > 3
-                nmask1(dyad,3,convo)=0;
-            end
-            if missN_s1(dyad,4,convo) > 0
-                nmask1(dyad,4,convo)=0;
-            end
-        elseif montageMatch.Montage1(dyad)==2
-            if missN_s1(dyad,1,convo) > 1
-                nmask1(dyad,1,convo)=0;
-            end
-            if missN_s1(dyad,2,convo) > 0
-                nmask1(dyad,2,convo)=0;
-            end
-            if missN_s1(dyad,3,convo) > 1
-                nmask1(dyad,3,convo)=0;
-            end
-            if missN_s1(dyad,4,convo) > 1
-                nmask1(dyad,4,convo)=0;
-            end
-        elseif montageMatch.Montage1(dyad)==3
-            if missN_s1(dyad,1,convo) > 2
-                nmask1(dyad,1,convo)=0;
-            end
-            if missN_s1(dyad,2,convo) > 1
-                nmask1(dyad,2,convo)=0;
-            end
-            if missN_s1(dyad,3,convo) > 3
-                nmask1(dyad,3,convo)=0;
-            end
-            if missN_s1(dyad,4,convo) > 2
-                nmask1(dyad,4,convo)=0;
+
+            if montageMatch.Montage2(dy)==1 
+                nChan=length(areas1{a,1});
+                cutoff=round(nChan*loss);
+                if missN_s2(dy,a,c) > cutoff
+                    nmask2(dy,a,c)=0;
+                end
+            elseif montageMatch.Montage1(dy)==2
+                nChan=length(areas2{a,1});
+                cutoff=round(nChan*loss);
+                if missN_s2(dy,a,c) > cutoff
+                    nmask2(dy,a,c)=0;
+                end
             end
         end
     end
 end
 
-for convo=1:2
-    for dyad=1:numdyads 
-        if montageMatch.Montage2(dyad)==1 
-            if missN_s2(dyad,1,convo) > 2
-                nmask2(dyad,1,convo)=0;
-            end
-            if missN_s2(dyad,2,convo) > 1
-                nmask2(dyad,2,convo)=0;
-            end
-            if missN_s2(dyad,3,convo) > 3
-                nmask2(dyad,3,convo)=0;
-            end
-            if missN_s2(dyad,4,convo) > 0
-                nmask2(dyad,4,convo)=0;
-            end
-        elseif montageMatch.Montage2(dyad)==2
-            if missN_s2(dyad,1,convo) > 1
-                nmask2(dyad,1,convo)=0;
-            end
-            if missN_s2(dyad,2,convo) > 0
-                nmask2(dyad,2,convo)=0;
-            end
-            if missN_s2(dyad,3,convo) > 1
-                nmask2(dyad,3,convo)=0;
-            end
-            if missN_s2(dyad,4,convo) > 1
-                nmask2(dyad,4,convo)=0;
-            end
-        elseif montageMatch.Montage2(dyad)==3
-            if missN_s2(dyad,1,convo) > 2
-                nmask2(dyad,1,convo)=0;
-            end
-            if missN_s2(dyad,2,convo) > 1
-                nmask2(dyad,2,convo)=0;
-            end
-            if missN_s2(dyad,3,convo) > 3
-                nmask2(dyad,3,convo)=0;
-            end
-            if missN_s2(dyad,4,convo) > 2
-                nmask2(dyad,4,convo)=0;
-            end
-        end
-    end
-end
